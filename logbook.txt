@@ -1,0 +1,8 @@
+TODO
+1. augment scraped values
+2. Proper the diagrams(labels,delet ethe existing redundant figures if any)
+3. check for data discrepancy across csv files
+4. Make it match ISO 10500:2012 guideline - proof to be given figuratively and textually
+5. Any tech to forecast the parameters from the present senario - predictive power to be deployed - for thr user to test and get result (constraints - must be deployable on the local host)
+6. group of the parametrs based on interlinking amng each other
+7. Change of parameter due to anthropgenic(human) and geogenic(natural) activities
