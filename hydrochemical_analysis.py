@@ -342,19 +342,61 @@ def generate_synthetic_data(df_original, n_per_season=None):
         print(f"  {col:<12} {om:>10.2f} {sm:>10.2f} {d:>+7.1f}%")
 
     # Distribution comparison plot
-    fig, axes = plt.subplots(4, 4, figsize=(20, 16))
-    for i, col in enumerate(chem):
-        ax = axes.flatten()[i]
-        ax.hist(df_original[col].dropna(), bins=12, alpha=0.6, label='Original',
-                color='steelblue', density=True, edgecolor='navy')
-        ax.hist(df_synthetic[col].dropna(), bins=12, alpha=0.5, label='Synthetic',
-                color='coral', density=True, edgecolor='darkred')
-        ax.set_title(col, fontweight='bold')
-        ax.legend(fontsize=8)
-    fig.suptitle('Original vs Synthetic Distributions', fontsize=14, y=1.01)
-    plt.tight_layout()
-    save_fig(fig, 'task1_cleaning', 'fig_original_vs_synthetic.png')
+        units = {
+        "pH": "", "EC": "µS/cm", "TDS": "mg/L",
+        "Ca": "mg/L", "Mg": "mg/L", "Na": "mg/L",
+        "K": "mg/L", "Cl": "mg/L", "SO4": "mg/L",
+        "HCO3": "mg/L", "NO3": "mg/L"
+    }
 
+    plt.rcParams.update({
+        "font.size": 10,
+        "axes.titlesize": 11,
+        "axes.labelsize": 11,
+        "legend.fontsize": 8
+    })
+
+    # ⬅ Increased width
+    fig, axes = plt.subplots(4, 4, figsize=(20, 16))
+    axes = axes.flatten()
+
+    for i, col in enumerate(chem):
+        ax = axes[i]
+        combined = pd.concat([df_original[col], df_synthetic[col]]).dropna()
+        bins = np.histogram_bin_edges(combined, bins=12)
+
+        ax.hist(df_original[col].dropna(), bins=bins,
+                alpha=0.6, label="Original",
+                density=True, edgecolor="black")
+
+        ax.hist(df_synthetic[col].dropna(), bins=bins,
+                alpha=0.5, label="Synthetic",
+                density=True, edgecolor="black")
+
+        unit = units.get(col, "")
+        ax.set_title(f"{col} ({unit})" if unit else col, fontweight="bold")
+        ax.grid(alpha=0.25)
+
+    for j in range(len(chem), len(axes)):
+        axes[j].set_visible(False)
+
+    # Proper margin adjustment (THIS IS IMPORTANT)
+    fig.subplots_adjust(left=0.08, right=0.98, bottom=0.08, top=0.92)
+
+    # Shared labels (position adjusted inward)
+    fig.text(0.04, 0.5, "Probability Density",
+             va="center", rotation="vertical", fontsize=14)
+
+    fig.text(0.5, 0.04, "Concentration / Parameter Value",
+             ha="center", fontsize=14)
+
+    fig.suptitle("Comparison of Original and Synthetic Groundwater Parameter Distributions",
+                 fontsize=16, fontweight="bold")
+
+    fig.savefig("fig_original_vs_synthetic_publication.png",
+                dpi=600, bbox_inches="tight")
+
+    plt.show()
     return df_synthetic, df_combined
 
 
@@ -534,11 +576,40 @@ def run_eda_and_seasonal(df):
     save_fig(fig, 'task3_seasonal', 'fig_seasonal_trends.png')
 
     # Pairplot
-    key = [p for p in ['pH', 'EC', 'TDS', 'Ca', 'Na', 'Cl', 'HCO3'] if p in df.columns]
-    g = sns.pairplot(df[key + ['Season']].dropna(), hue='Season', diag_kind='kde',
-                     plot_kws={'alpha': 0.4, 's': 30}, palette='Set1', corner=True)
-    g.fig.suptitle('Pairplot', y=1.02)
-    save_fig(g.fig, 'task3_seasonal', 'fig_pairplot.png')
+    key = [p for p in ['pH', 'EC', 'TDS', 'Ca', 'Na', 'Cl', 'HCO3']
+           if p in df.columns]
+
+    g = sns.pairplot(
+        df[key + ['Season']].dropna(),
+        hue='Season',
+        diag_kind='kde',
+        plot_kws={'alpha': 0.5, 's': 35},
+        palette='Set1',
+        corner=True
+    )
+
+    # Improve spacing so title does not overlap
+    g.fig.subplots_adjust(top=0.95)
+
+    g.fig.suptitle(
+        "Seasonal Variation of Groundwater Parameters",
+        fontsize=16,
+        fontweight="bold"
+    )
+
+    # Improve axis label font size
+    for ax in g.axes.flatten():
+        if ax is not None:
+            ax.set_xlabel(ax.get_xlabel(), fontsize=10)
+            ax.set_ylabel(ax.get_ylabel(), fontsize=10)
+
+    g.fig.savefig(
+        "fig_pairplot_publication.png",
+        dpi=600,
+        bbox_inches="tight"
+    )
+
+    plt.show()
     return means
 
 
