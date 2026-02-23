@@ -69,23 +69,79 @@ class Config:
                  'Iron', 'HCO3', 'Cl', 'SO4', 'NO3', 'F', 'DO']
     META_COLS = ['Sl_No', 'Sites', 'Areas', 'Location_ID', 'Latitude', 'Longitude', 'Season']
 
-    IS_STANDARDS = {
-        'pH':         ((6.5, 8.5),  (6.5, 8.5)),
-        'EC':         ((0, 750),    (0, 3000)),
-        'TDS':        ((0, 500),    (0, 2000)),
-        'TH':         ((0, 200),    (0, 600)),
-        'Alkalinity': ((0, 200),    (0, 600)),
-        'Ca':         ((0, 75),     (0, 200)),
-        'Mg':         ((0, 30),     (0, 100)),
-        'Na':         ((0, 200),    (0, 200)),
-        'K':          ((0, 12),     (0, 12)),
-        'Iron':       ((0, 0.3),    (0, 1.0)),
-        'Cl':         ((0, 250),    (0, 1000)),
-        'SO4':        ((0, 200),    (0, 400)),
-        'NO3':        ((0, 45),     (0, 45)),
-        'F':          ((0, 1.0),    (0, 1.5)),
-        'DO':         ((5, 14),     (4, 14)),
+    # -----------------------------------------------------------------------
+    # IS 10500:2012 — Indian Standard Drinking Water Specification (2nd Rev)
+    # Bureau of Indian Standards (BIS), New Delhi
+    # Reference: IS 10500:2012 Table 1 & Table 2
+    # Format: 'Parameter': (Acceptable_Limit, Permissible_Limit, Unit, IS_Table)
+    #   - Acceptable Limit: limit in the absence of alternate source
+    #   - Permissible Limit: limit in the absence of alternate source
+    #     (allowed only when no alternative source is available; "NR" = No Relaxation)
+    #   - For pH: range-based (6.5–8.5); for others: upper-bound based
+    # -----------------------------------------------------------------------
+    IS_10500 = {
+        # IS 10500:2012 Table 1 — Physical Parameters (Organoleptic)
+        'pH':         {'acceptable': (6.5, 8.5),  'permissible': (6.5, 8.5),  'unit': '',       'table': 'Table 1', 'type': 'range'},
+        'TDS':        {'acceptable': 500,   'permissible': 2000,  'unit': 'mg/L',   'table': 'Table 1', 'type': 'upper'},
+        # IS 10500:2012 Table 2 — Chemical Parameters (Substances)
+        'TH':         {'acceptable': 200,   'permissible': 600,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
+        'Alkalinity':  {'acceptable': 200,   'permissible': 600,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
+        'Ca':         {'acceptable': 75,    'permissible': 200,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
+        'Mg':         {'acceptable': 30,    'permissible': 100,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
+        'Iron':       {'acceptable': 0.3,   'permissible': 0.3,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper', 'note': 'No Relaxation'},
+        'Cl':         {'acceptable': 250,   'permissible': 1000,  'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
+        'SO4':        {'acceptable': 200,   'permissible': 400,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
+        'NO3':        {'acceptable': 45,    'permissible': 45,    'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper', 'note': 'No Relaxation'},
+        'F':          {'acceptable': 1.0,   'permissible': 1.5,   'unit': 'mg/L',   'table': 'Table 2', 'type': 'upper'},
     }
+
+    # Supplementary guidelines (NOT in IS 10500 but used in GoI/WHO frameworks)
+    # Clearly separated and cited separately
+    SUPPLEMENTARY_STANDARDS = {
+        'EC':         {'acceptable': 750,   'permissible': 3000,  'unit': 'uS/cm',  'source': 'WHO (2011) Guidelines for Drinking-water Quality, 4th Ed.', 'type': 'upper'},
+        'Na':         {'acceptable': 200,   'permissible': 200,   'unit': 'mg/L',   'source': 'WHO (2011) / ICMR recommendation', 'type': 'upper'},
+        'K':          {'acceptable': 12,    'permissible': 12,    'unit': 'mg/L',   'source': 'GoI FSSAI / WHO advisory', 'type': 'upper'},
+        'DO':         {'acceptable': (6, 14), 'permissible': (4, 14), 'unit': 'mg/L', 'source': 'CPCB Class A Criteria', 'type': 'range'},
+        'HCO3':       {'acceptable': 300,   'permissible': 600,   'unit': 'mg/L',   'source': 'Derived from Alkalinity (IS 10500)', 'type': 'upper'},
+    }
+
+    # Backward-compatible merged dict for plotting (acceptable_low, acceptable_high, permissible_low, permissible_high)
+    @classmethod
+    def get_all_standards(cls):
+        """Return merged standards for all parameters with uniform (low, high) format."""
+        merged = {}
+        for param, s in {**cls.IS_10500, **cls.SUPPLEMENTARY_STANDARDS}.items():
+            if s['type'] == 'range':
+                acc = s['acceptable']
+                perm = s['permissible']
+            else:
+                acc = (0, s['acceptable'])
+                perm = (0, s['permissible'])
+            merged[param] = (acc, perm)
+        return merged
+
+    # Units map for axis labels on all plots
+    UNITS = {
+        'pH': '', 'EC': 'uS/cm', 'TDS': 'mg/L', 'TH': 'mg/L',
+        'Alkalinity': 'mg/L', 'Ca': 'mg/L', 'Mg': 'mg/L', 'Na': 'mg/L',
+        'K': 'mg/L', 'Iron': 'mg/L', 'HCO3': 'mg/L', 'Cl': 'mg/L',
+        'SO4': 'mg/L', 'NO3': 'mg/L', 'F': 'mg/L', 'DO': 'mg/L',
+    }
+
+    # Citation string for reports
+    IS_10500_CITATION = (
+        'Bureau of Indian Standards (BIS). IS 10500:2012 '
+        'Indian Standard — Drinking Water Specification (Second Revision). '
+        'New Delhi: BIS, 2012.'
+    )
+    WHO_CITATION = (
+        'World Health Organization (WHO). Guidelines for Drinking-water Quality, '
+        '4th Edition. Geneva: WHO, 2011.'
+    )
+    GOI_CITATION = (
+        'Government of India, Ministry of Jal Shakti. National Drinking Water '
+        'Quality Monitoring & Surveillance Framework. New Delhi: DDWS, 2020.'
+    )
 
     SYNTHETIC_SAMPLES_PER_SEASON = 50
     RANDOM_SEED = 42
@@ -144,15 +200,43 @@ def mg_to_meq(df):
     meq['NO3_meq']  = df['NO3']  / 62.00
     return meq
 
+def param_with_unit(param):
+    """Return 'Parameter (unit)' string for axis labels."""
+    u = Config.UNITS.get(param, '')
+    return f"{param} ({u})" if u else param
+
+def classify_is10500(value, param):
+    """Classify a measured value against IS 10500:2012 (+ supplementary) limits.
+    Returns: 'Compliant - Safe', 'Permissible - Needs Caution', 'Non-Compliant - Unsafe', or 'N/A'.
+    Also returns the source standard used."""
+    all_std = {**Config.IS_10500, **Config.SUPPLEMENTARY_STANDARDS}
+    if pd.isna(value) or param not in all_std:
+        return 'N/A', ''
+    s = all_std[param]
+    source = s.get('table', s.get('source', ''))
+    if s['type'] == 'range':
+        acc_lo, acc_hi = s['acceptable']
+        perm_lo, perm_hi = s['permissible']
+        if acc_lo <= value <= acc_hi:
+            return 'Compliant - Safe', source
+        elif perm_lo <= value <= perm_hi:
+            return 'Permissible - Needs Caution', source
+        else:
+            return 'Non-Compliant - Unsafe', source
+    else:  # upper bound
+        if value <= s['acceptable']:
+            return 'Compliant - Safe', source
+        elif value <= s['permissible']:
+            return 'Permissible - Needs Caution', source
+        else:
+            return 'Non-Compliant - Unsafe', source
+
 def classify_safety(value, param):
-    if pd.isna(value) or param not in Config.IS_STANDARDS:
-        return 'N/A'
-    (low_d, high_d), (low_p, high_p) = Config.IS_STANDARDS[param]
-    if low_d <= value <= high_d:
-        return 'Safe'
-    elif low_p <= value <= high_p:
-        return 'Marginal'
-    return 'Unsafe'
+    """Backward-compatible wrapper returning short label."""
+    label, _ = classify_is10500(value, param)
+    short = {'Compliant - Safe': 'Safe', 'Permissible - Needs Caution': 'Marginal',
+             'Non-Compliant - Unsafe': 'Unsafe', 'N/A': 'N/A'}
+    return short.get(label, 'N/A')
 
 
 # ============================================================================
@@ -483,7 +567,8 @@ def run_eda_and_seasonal(df):
         ax = axes.flatten()[i]
         for s in seasons:
             ax.hist(df[df['Season'] == s][col].dropna(), bins=10, alpha=0.5, label=s, density=True)
-        ax.set_title(col); ax.legend(fontsize=7)
+        ax.set_title(param_with_unit(col), fontweight='bold'); ax.legend(fontsize=7)
+        ax.set_xlabel(param_with_unit(col), fontsize=9)
     fig.suptitle('Distributions by Season', fontsize=14, y=1.01)
     plt.tight_layout()
     save_fig(fig, 'task3_seasonal', 'fig_distributions.png')
@@ -533,7 +618,9 @@ def run_eda_and_seasonal(df):
     for i, col in enumerate(chem):
         sns.boxplot(data=df, x='Season', y=col, order=seasons, palette=palette,
                     ax=axes.flatten()[i], width=0.6)
-        axes.flatten()[i].set_title(col, fontweight='bold'); axes.flatten()[i].set_xlabel('')
+        axes.flatten()[i].set_title(param_with_unit(col), fontweight='bold')
+        axes.flatten()[i].set_ylabel(param_with_unit(col))
+        axes.flatten()[i].set_xlabel('')
     fig.suptitle('Seasonal Boxplots', fontsize=15, y=1.01)
     plt.tight_layout()
     save_fig(fig, 'task3_seasonal', 'fig_seasonal_boxplots.png')
@@ -543,7 +630,9 @@ def run_eda_and_seasonal(df):
     for i, col in enumerate(chem):
         sns.violinplot(data=df, x='Season', y=col, order=seasons, palette=palette,
                        ax=axes.flatten()[i], inner='quartile')
-        axes.flatten()[i].set_title(col, fontweight='bold'); axes.flatten()[i].set_xlabel('')
+        axes.flatten()[i].set_title(param_with_unit(col), fontweight='bold')
+        axes.flatten()[i].set_ylabel(param_with_unit(col))
+        axes.flatten()[i].set_xlabel('')
     fig.suptitle('Seasonal Violin Plots', fontsize=15, y=1.01)
     plt.tight_layout()
     save_fig(fig, 'task3_seasonal', 'fig_seasonal_violins.png')
@@ -570,7 +659,9 @@ def run_eda_and_seasonal(df):
             ax.plot(seasons, vals, 'o-', alpha=0.15, markersize=2)
         ax.plot(seasons, [means.loc[s, col] for s in seasons], 's-', color='black',
                 linewidth=2.5, markersize=8, zorder=5)
-        ax.set_title(col, fontweight='bold'); ax.tick_params(axis='x', rotation=30)
+        ax.set_title(param_with_unit(col), fontweight='bold')
+        ax.set_ylabel(param_with_unit(col))
+        ax.tick_params(axis='x', rotation=30)
     fig.suptitle('Seasonal Trends (Black=Mean)', fontsize=14, y=1.01)
     plt.tight_layout()
     save_fig(fig, 'task3_seasonal', 'fig_seasonal_trends.png')
@@ -604,59 +695,254 @@ def run_eda_and_seasonal(df):
             ax.set_ylabel(ax.get_ylabel(), fontsize=10)
 
     g.fig.savefig(
-        "fig_pairplot_publication.png",
+        Config.FIGURE_DIR / 'task3_seasonal' / 'fig_pairplot_publication.png',
         dpi=600,
         bbox_inches="tight"
     )
 
-    plt.show()
+    plt.close(g.fig)
+    print(f"  [FIG] figures/task3_seasonal/fig_pairplot_publication.png")
     return means
 
 
 # ============================================================================
-# TASK 4: DRINKING WATER SAFETY
+# TASK 4: IS 10500:2012 COMPLIANCE ASSESSMENT
 # ============================================================================
 def assess_drinking_water(df):
     print(f"\n{'='*70}")
-    print("TASK 4: DRINKING WATER RISK INTELLIGENCE")
+    print("TASK 4: IS 10500:2012 DRINKING WATER COMPLIANCE ASSESSMENT")
     print(f"{'='*70}")
 
+    # ---- Print reference standards table ----
+    print("\n  ================================================================")
+    print("  REFERENCE STANDARDS APPLIED")
+    print("  ================================================================")
+    print(f"  Primary: {Config.IS_10500_CITATION}")
+    print(f"  Supplementary: {Config.WHO_CITATION}")
+    print(f"  Framework: {Config.GOI_CITATION}")
+    print()
+
+    all_std = {**Config.IS_10500, **Config.SUPPLEMENTARY_STANDARDS}
+    print(f"  {'Parameter':<12} {'Unit':<8} {'Acceptable':>10} {'Permissible':>12} {'Source':<30} {'Note'}")
+    print(f"  {'-'*90}")
+    for p, s in all_std.items():
+        u = s.get('unit', '')
+        if s['type'] == 'range':
+            acc_str = f"{s['acceptable'][0]}-{s['acceptable'][1]}"
+            perm_str = f"{s['permissible'][0]}-{s['permissible'][1]}"
+        else:
+            acc_str = str(s['acceptable'])
+            perm_str = str(s['permissible'])
+        src = s.get('table', s.get('source', ''))
+        note = s.get('note', '')
+        print(f"  {p:<12} {u:<8} {acc_str:>10} {perm_str:>12} {src:<30} {note}")
+
+    # ---- Evaluate every sample × every parameter ----
     results = []
     for _, row in df.iterrows():
-        for p in Config.IS_STANDARDS:
+        for p in all_std:
             if p in df.columns:
-                results.append({'Location_ID': row['Location_ID'], 'Season': row['Season'],
-                                'Parameter': p, 'Value': row.get(p, np.nan),
-                                'Status': classify_safety(row.get(p, np.nan), p)})
+                status, source = classify_is10500(row.get(p, np.nan), p)
+                results.append({
+                    'Location_ID': row['Location_ID'],
+                    'Season': row['Season'],
+                    'Data_Type': row.get('Data_Type', 'Original'),
+                    'Parameter': p,
+                    'Value': row.get(p, np.nan),
+                    'Unit': all_std[p].get('unit', ''),
+                    'Acceptable_Limit': str(all_std[p]['acceptable']),
+                    'Permissible_Limit': str(all_std[p]['permissible']),
+                    'Compliance_Status': status,
+                    'Reference': source,
+                })
     comp_df = pd.DataFrame(results)
 
-    summary = comp_df.groupby(['Parameter', 'Status']).size().unstack(fill_value=0)
-    print("\n  Compliance Summary:")
-    print((summary.div(summary.sum(axis=1), axis=0) * 100).round(1).to_string())
+    # Save full compliance table
+    save_dataset(comp_df, 'is10500_compliance_report.csv')
 
-    non_safe = comp_df[comp_df['Status'].isin(['Unsafe', 'Marginal'])]
-    if len(non_safe) > 0:
-        print("\n  Exceedances by Season:")
-        print(non_safe.groupby(['Season', 'Parameter']).size().unstack(fill_value=0).to_string())
-        print("\n  Worst Locations:")
-        worst = non_safe.groupby(['Location_ID', 'Season']).size().reset_index(name='Exc')
-        print(worst.sort_values('Exc', ascending=False).head(15).to_string(index=False))
+    # ---- Compliance summary ----
+    print("\n  ================================================================")
+    print("  COMPLIANCE SUMMARY (% of samples per status)")
+    print("  ================================================================")
+    summary = comp_df.groupby(['Parameter', 'Compliance_Status']).size().unstack(fill_value=0)
+    pct = (summary.div(summary.sum(axis=1), axis=0) * 100).round(1)
+    print(pct.to_string())
 
-    # Heatmap
-    fig, axes = plt.subplots(1, 3, figsize=(22, 8))
+    # ---- Exceedances breakdown ----
+    non_compliant = comp_df[comp_df['Compliance_Status'].isin(
+        ['Non-Compliant - Unsafe', 'Permissible - Needs Caution'])]
+    if len(non_compliant) > 0:
+        print("\n  ================================================================")
+        print("  EXCEEDANCES BY SEASON & PARAMETER")
+        print("  ================================================================")
+        exc_season = non_compliant.groupby(['Season', 'Parameter', 'Compliance_Status']).size()
+        print(exc_season.unstack(fill_value=0).to_string())
+
+        print("\n  ================================================================")
+        print("  WORST LOCATIONS (Most Non-Compliant Parameters)")
+        print("  ================================================================")
+        unsafe_only = comp_df[comp_df['Compliance_Status'] == 'Non-Compliant - Unsafe']
+        if len(unsafe_only) > 0:
+            worst = unsafe_only.groupby(['Location_ID', 'Season']).size().reset_index(name='Unsafe_Count')
+            print(worst.sort_values('Unsafe_Count', ascending=False).head(15).to_string(index=False))
+
+        # Flagged parameters
+        print("\n  ================================================================")
+        print("  FLAGGED PARAMETERS (>10% Non-Compliant)")
+        print("  ================================================================")
+        for p in all_std:
+            p_data = comp_df[comp_df['Parameter'] == p]
+            n_unsafe = (p_data['Compliance_Status'] == 'Non-Compliant - Unsafe').sum()
+            n_caution = (p_data['Compliance_Status'] == 'Permissible - Needs Caution').sum()
+            total = len(p_data)
+            pct_nc = (n_unsafe / total * 100) if total > 0 else 0
+            pct_caut = (n_caution / total * 100) if total > 0 else 0
+            if pct_nc > 10 or pct_caut > 10:
+                note = all_std[p].get('note', '')
+                src = all_std[p].get('table', all_std[p].get('source', ''))
+                print(f"    {p:<12}: {pct_nc:.1f}% Unsafe, {pct_caut:.1f}% Caution  "
+                      f"[Limit: {all_std[p]['acceptable']}; Ref: {src}] {note}")
+
+    # ---- Contamination source notes ----
+    print("\n  ================================================================")
+    print("  POTENTIAL CONTAMINATION SOURCES & CORRECTIVE ACTIONS")
+    print("  ================================================================")
+    contamination_notes = {
+        'pH': ('Low pH indicates acidic groundwater, possibly from CO2-charged recharge, '
+               'organic decomposition, or acid mine drainage.',
+               'Aeration, limestone contactors, or soda ash dosing.'),
+        'Iron': ('Elevated iron from dissolution of iron-bearing minerals (laterite, '
+                 'ferruginous sandstone) or corrosion of well casings.',
+                 'Aeration + sand filtration, or iron removal plant.'),
+        'NO3': ('Nitrate from agricultural fertilizers, sewage/septic tank leaching, '
+                'or animal waste infiltration.',
+                'Source protection zones, controlled fertilizer application, denitrification units.'),
+        'F': ('Fluoride from fluorite/apatite-bearing host rocks, '
+              'granitic terrain weathering.',
+              'Activated alumina filters, Nalgonda technique, blending with low-F sources.'),
+        'TH': ('High hardness from dissolution of calcite, dolomite, '
+               'gypsum in the aquifer matrix.',
+               'Water softening (ion exchange), blending with soft water sources.'),
+        'TDS': ('Elevated TDS from intensive rock-water interaction, '
+                'evaporative concentration, or anthropogenic inputs.',
+                'Reverse osmosis, regulated extraction, rainwater harvesting.'),
+        'K': ('High potassium from potash fertilizer runoff or '
+              'K-feldspar weathering.',
+              'Source protection, controlled fertigation.'),
+        'DO': ('Low DO from organic pollution, stagnant conditions, '
+               'or high microbial oxygen demand.',
+               'Aeration, removal of organic sources, periodic flushing.')
+    }
+    flagged_params = set()
+    if len(non_compliant) > 0:
+        flagged_params = set(non_compliant['Parameter'].unique())
+    for p in flagged_params:
+        if p in contamination_notes:
+            cause, action = contamination_notes[p]
+            print(f"\n    {p}:")
+            print(f"      Cause:  {cause}")
+            print(f"      Action: {action}")
+
+    # ---- Sample-wise safety conclusion ----
+    print("\n  ================================================================")
+    print("  SAMPLE-WISE SAFETY CONCLUSION")
+    print("  ================================================================")
+    sample_status = comp_df.groupby(['Location_ID', 'Season']).apply(
+        lambda g: 'UNSAFE' if (g['Compliance_Status'] == 'Non-Compliant - Unsafe').any()
+        else ('CAUTION' if (g['Compliance_Status'] == 'Permissible - Needs Caution').any()
+              else 'SAFE')
+    ).reset_index(name='Overall_Status')
+
+    n_safe = (sample_status['Overall_Status'] == 'SAFE').sum()
+    n_caut = (sample_status['Overall_Status'] == 'CAUTION').sum()
+    n_unsafe = (sample_status['Overall_Status'] == 'UNSAFE').sum()
+    total_samples = len(sample_status)
+    print(f"    Total sample-season combinations: {total_samples}")
+    print(f"    SAFE for drinking (IS 10500): {n_safe} ({n_safe/total_samples*100:.1f}%)")
+    print(f"    CAUTION (permissible limit):  {n_caut} ({n_caut/total_samples*100:.1f}%)")
+    print(f"    UNSAFE (non-compliant):       {n_unsafe} ({n_unsafe/total_samples*100:.1f}%)")
+    save_dataset(sample_status, 'is10500_sample_safety.csv')
+
+    # ---- IS 10500 Compliance Heatmap (3-tier color) ----
+    all_params = list(all_std.keys())
+    fig, axes = plt.subplots(1, 3, figsize=(24, 10))
+    status_map = {'Compliant - Safe': 0, 'Permissible - Needs Caution': 1, 'Non-Compliant - Unsafe': 2, 'N/A': np.nan}
+    from matplotlib.colors import ListedColormap
+    cmap_3 = ListedColormap(['#27ae60', '#f39c12', '#e74c3c'])
+
     for si, season in enumerate(Config.SEASON_ORDER):
         ax = axes[si]
-        sd = df[df['Season'] == season].drop_duplicates('Location_ID').set_index('Location_ID').head(20)
+        sd = df[df['Season'] == season].drop_duplicates('Location_ID').set_index('Location_ID').head(25)
         sn = pd.DataFrame(index=sd.index)
-        for p in Config.IS_STANDARDS:
+        for p in all_params:
             if p in sd.columns:
-                sn[p] = sd[p].apply(lambda v: {'Safe': 0, 'Marginal': 1, 'Unsafe': 2, 'N/A': np.nan}[classify_safety(v, p)])
-        sns.heatmap(sn.astype(float), cmap=['#2ecc71', '#f39c12', '#e74c3c'], vmin=0, vmax=2,
-                    ax=ax, linewidths=0.5)
-        ax.set_title(season, fontweight='bold')
-    fig.suptitle('Compliance Heatmap (IS 10500:2012)', fontsize=14)
+                sn[p] = sd[p].apply(lambda v, par=p: status_map[classify_is10500(v, par)[0]])
+        sns.heatmap(sn.astype(float), cmap=cmap_3, vmin=0, vmax=2,
+                    ax=ax, linewidths=0.5, cbar_kws={'ticks': [0, 1, 2]})
+        ax.set_title(f'{season}', fontweight='bold', fontsize=12)
+        ax.set_ylabel('Location ID')
+        cbar = ax.collections[0].colorbar
+        cbar.set_ticklabels(['Compliant\n(Safe)', 'Permissible\n(Caution)', 'Non-Compliant\n(Unsafe)'])
+
+    fig.suptitle('IS 10500:2012 Compliance Heatmap\n(BIS Drinking Water Standard)', fontsize=14, fontweight='bold')
     plt.tight_layout()
-    save_fig(fig, 'task4_safety', 'fig_compliance_heatmap.png')
+    save_fig(fig, 'task4_safety', 'fig_is10500_compliance_heatmap.png')
+
+    # ---- Bar chart: % compliance per parameter ----
+    fig, ax = plt.subplots(figsize=(16, 7))
+    params_plot = [p for p in all_params if p in comp_df['Parameter'].unique()]
+    safe_pct, caution_pct, unsafe_pct = [], [], []
+    for p in params_plot:
+        pd_p = comp_df[comp_df['Parameter'] == p]
+        total_p = len(pd_p)
+        safe_pct.append((pd_p['Compliance_Status'] == 'Compliant - Safe').sum() / total_p * 100)
+        caution_pct.append((pd_p['Compliance_Status'] == 'Permissible - Needs Caution').sum() / total_p * 100)
+        unsafe_pct.append((pd_p['Compliance_Status'] == 'Non-Compliant - Unsafe').sum() / total_p * 100)
+
+    x = np.arange(len(params_plot))
+    w = 0.28
+    ax.bar(x - w, safe_pct, w, label='Compliant - Safe', color='#27ae60', edgecolor='k')
+    ax.bar(x, caution_pct, w, label='Permissible - Needs Caution', color='#f39c12', edgecolor='k')
+    ax.bar(x + w, unsafe_pct, w, label='Non-Compliant - Unsafe', color='#e74c3c', edgecolor='k')
+    ax.set_xticks(x); ax.set_xticklabels(params_plot, rotation=45, ha='right')
+    ax.set_ylabel('Percentage of Samples (%)')
+    ax.set_title('IS 10500:2012 Compliance by Parameter', fontweight='bold')
+    ax.legend(loc='upper right')
+    ax.set_ylim(0, 110)
+    for i, p in enumerate(params_plot):
+        if unsafe_pct[i] > 5:
+            ax.annotate(f'{unsafe_pct[i]:.0f}%', (x[i] + w, unsafe_pct[i] + 1), fontsize=8, ha='center', color='darkred')
+    plt.tight_layout()
+    save_fig(fig, 'task4_safety', 'fig_is10500_compliance_bars.png')
+
+    # ---- Exceedance factor plot (value / acceptable limit) ----
+    fig, axes = plt.subplots(4, 4, figsize=(20, 18))
+    upper_params = [p for p in all_params if all_std[p]['type'] == 'upper']
+    for i, p in enumerate(upper_params):
+        if i >= 16:
+            break
+        ax = axes.flatten()[i]
+        acc = all_std[p]['acceptable']
+        perm = all_std[p]['permissible']
+        for s in Config.SEASON_ORDER:
+            vals = df[df['Season'] == s][p].dropna()
+            ef = vals / acc
+            ax.scatter([s]*len(ef), ef, c=Config.SEASON_COLORS[s], s=25, alpha=0.5, edgecolors='k', linewidth=0.3)
+        ax.axhline(1.0, color='green', ls='--', lw=1.5, label='Acceptable')
+        if perm != acc:
+            ax.axhline(perm / acc, color='orange', ls='--', lw=1.5, label='Permissible')
+        ax.set_title(f'{p} ({all_std[p].get("unit", "")})', fontweight='bold')
+        ax.set_ylabel('Exceedance Factor')
+        if i == 0:
+            ax.legend(fontsize=7)
+    # Hide unused axes
+    for j in range(len(upper_params), 16):
+        axes.flatten()[j].set_visible(False)
+    fig.suptitle('IS 10500:2012 Exceedance Factor (Value / Acceptable Limit)\nLine = 1.0 means at limit',
+                 fontsize=13, fontweight='bold')
+    plt.tight_layout()
+    save_fig(fig, 'task4_safety', 'fig_is10500_exceedance_factor.png')
+
     return comp_df
 
 
@@ -932,7 +1218,8 @@ def generate_insights(df, ml_results):
     season_exc = {}
     for s in Config.SEASON_ORDER:
         sd = df[df['Season'] == s]
-        exc = sum(1 for _, r in sd.iterrows() for p in Config.IS_STANDARDS if p in sd.columns and classify_safety(r.get(p, np.nan), p) in ('Unsafe', 'Marginal'))
+        all_std = {**Config.IS_10500, **Config.SUPPLEMENTARY_STANDARDS}
+        exc = sum(1 for _, r in sd.iterrows() for p in all_std if p in sd.columns and classify_safety(r.get(p, np.nan), p) in ('Unsafe', 'Marginal'))
         season_exc[s] = exc
         print(f"    {s}: {exc} exceedances")
     worst = max(season_exc, key=season_exc.get)
@@ -980,6 +1267,9 @@ def generate_insights(df, ml_results):
     print(f"  Mechanism: {'Rock weathering' if na_r < 0.5 else 'Evaporation/Mixed'}")
     print(f"  Best ML (TDS): {bt[0]} (CV R2={bt[1]['CV_R2']:.4f})")
     print(f"  Best ML (EC):  {be[0]} (CV R2={be[1]['CV_R2']:.4f})")
+    print(f"\n  IS 10500:2012 Compliance Status: EVALUATED")
+    print(f"  Reference: {Config.IS_10500_CITATION}")
+    print(f"  Supplementary: {Config.WHO_CITATION}")
     return {'worst_season': worst, 'dominant_type': f'{dom_cat}-{dom_an}'}
 
 
