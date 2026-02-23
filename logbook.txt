@@ -6,3 +6,5 @@ TODO
 5. Any tech to forecast the parameters from the present senario - predictive power to be deployed - for thr user to test and get result (constraints - must be deployable on the local host)
 6. group of the parametrs based on interlinking amng each other
 7. Change of parameter due to anthropgenic(human) and geogenic(natural) activities
+8. Add units to the plots
+9. for the iso one the prompt has been generated now 
