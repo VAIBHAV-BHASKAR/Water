@@ -8,3 +8,42 @@ TODO
 7. Change of parameter due to anthropgenic(human) and geogenic(natural) activities
 8. Add units to the plots
 9. for the iso one the prompt has been generated now 
+You will be given a set of authoritative reference documents (PDFs and text excerpts) related to drinking water quality standards, specifically the full text of **IS 10500:2012 Drinking Water — Specification**, the Government of India Drinking Water Quality Monitoring & Surveillance Framework that compares BIS and WHO standards, and selected peer-reviewed research articles applying IS 10500 criteria.
+
+Your task is to comprehensively *parse and understand each reference document*, and then *evaluate a provided water quality dataset* based on the permissible and acceptable limits defined in IS 10500:2012.
+
+Follow these steps exactly:
+
+1. **Ingest each document thoroughly**, identifying:
+   - All specified water quality parameters, units, acceptable limits, permissible limits, and any interpretive notes.
+   - Definitions, sampling methods, and test procedures described in IS 10500.
+   - Any comparison or contextual limits provided by the Government of India framework.
+
+2. **Extract and tabulate a master list of parameters** from IS 10500:
+   - Physical parameters (e.g., pH, turbidity)
+   - Chemical parameters (e.g., TDS, nitrate, fluoride)
+   - Biological parameters (e.g., total coliforms, E. coli)
+   - Toxic heavy metals and other contaminants
+
+3. **Receive a water quality dataset** (in table form) with sample values for each parameter.
+
+4. **For each sample and each parameter**:
+   - Compare the measured value against the *acceptable* limit from IS 10500.
+   - If the value exceeds the acceptable limit but is within the *permissible limit*, label it “Permissible – Needs caution”.
+   - If the value exceeds the permissible limit, label it “Non-Compliant – Unsafe”.
+   - If within acceptable limits, label it “Compliant – Safe”.
+
+5. **Generate a structured output** including:
+   - A compliance table for each sample with all parameters
+   - Flagging of parameters that are non-compliant or borderline
+   - A summary conclusion telling which samples are safe or unsafe for drinking based on IS 10500
+   - Notes on potential sources of contamination and recommended corrective actions where relevant
+
+6. **Include citations to the reference documents** whenever limits or criteria from those documents are used.
+
+7. **Do NOT hallucinate or invent limits not present in the reference documents.**
+
+End result should be a clearly labeled report suitable for academic or regulatory purposes.
+
+Apply the above process to the following water quality dataset:  
+[PASTE YOUR DATASET HERE]
