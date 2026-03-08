@@ -32,10 +32,20 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
-from sklearn.model_selection import cross_val_score, KFold
+from sklearn.model_selection import cross_val_score, KFold, train_test_split
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.impute import KNNImputer
 from sklearn.base import clone
+try:
+    from xgboost import XGBRegressor
+    HAS_XGBOOST = True
+except ImportError:
+    HAS_XGBOOST = False
+try:
+    import shap
+    HAS_SHAP = True
+except ImportError:
+    HAS_SHAP = False
 import os, sys, io
 from pathlib import Path
 from datetime import datetime
@@ -143,9 +153,29 @@ class Config:
         'Quality Monitoring & Surveillance Framework. New Delhi: DDWS, 2020.'
     )
 
+    # -----------------------------------------------------------------------
+    # WQI Configuration (Weight-based, per Brown et al., 1970)
+    # Wi assigned 1-5 based on health significance for drinking water
+    # Si = IS 10500:2012 acceptable limit (or WHO where IS 10500 is absent)
+    # -----------------------------------------------------------------------
+    WQI_WEIGHTS = {
+        'pH': 4, 'EC': 4, 'TDS': 5, 'TH': 2, 'Alkalinity': 2,
+        'Ca': 2, 'Mg': 2, 'Na': 3, 'K': 2, 'Iron': 4,
+        'HCO3': 1, 'Cl': 3, 'SO4': 4, 'NO3': 5, 'F': 5, 'DO': 4,
+    }
+    WQI_STANDARDS = {
+        'pH': 8.5, 'EC': 750, 'TDS': 500, 'TH': 200, 'Alkalinity': 200,
+        'Ca': 75, 'Mg': 30, 'Na': 200, 'K': 12, 'Iron': 0.3,
+        'HCO3': 300, 'Cl': 250, 'SO4': 200, 'NO3': 45, 'F': 1.0, 'DO': 6.0,
+    }
+    WQI_CATEGORIES = [
+        (50, 'Excellent'), (100, 'Good'), (200, 'Poor'),
+        (300, 'Very Poor'), (float('inf'), 'Unsuitable'),
+    ]
+
     SYNTHETIC_SAMPLES_PER_SEASON = 50
     RANDOM_SEED = 42
-    ML_TARGETS = ['TDS', 'EC']
+    ML_TARGETS = ['TDS', 'EC', 'WQI']
     CV_FOLDS = 5
     CBE_THRESHOLD = 10
     PLOT_DPI = 150
@@ -237,6 +267,119 @@ def classify_safety(value, param):
     short = {'Compliant - Safe': 'Safe', 'Permissible - Needs Caution': 'Marginal',
              'Non-Compliant - Unsafe': 'Unsafe', 'N/A': 'N/A'}
     return short.get(label, 'N/A')
+
+
+# ============================================================================
+# WQI COMPUTATION (Weight-based Water Quality Index)
+# ============================================================================
+def compute_wqi(df):
+    """Compute Weight-based Water Quality Index per Brown et al. (1970).
+    WQI = sum(Wi * qi) where Wi = wi / sum(wi) and qi = (Ci / Si) * 100.
+    Classification: Excellent (<50), Good (50-100), Poor (100-200),
+                    Very Poor (200-300), Unsuitable (>300)."""
+    print(f"\n{'='*70}")
+    print("WQI COMPUTATION (Weight-based, IS 10500:2012 / WHO Standards)")
+    print(f"{'='*70}")
+
+    weights = Config.WQI_WEIGHTS
+    standards = Config.WQI_STANDARDS
+    available = [p for p in weights if p in df.columns]
+    W_sum = sum(weights[p] for p in available)
+    rel_weights = {p: weights[p] / W_sum for p in available}
+
+    print(f"\n  Parameters used: {len(available)}")
+    print(f"  {'Param':<12} {'Weight':>6} {'Rel.Wt':>8} {'Standard (Si)':>14}")
+    print(f"  {'-'*44}")
+    for p in available:
+        print(f"  {p:<12} {weights[p]:>6} {rel_weights[p]:>8.4f} {standards[p]:>14}")
+
+    # Compute WQI for each sample
+    wqi_values = []
+    for _, row in df.iterrows():
+        sub_indices = []
+        for p in available:
+            ci = row.get(p, np.nan)
+            si = standards[p]
+            if pd.notna(ci) and si > 0:
+                qi = (ci / si) * 100
+                sub_indices.append(rel_weights[p] * qi)
+        wqi_values.append(sum(sub_indices) if sub_indices else np.nan)
+
+    df['WQI'] = wqi_values
+
+    def _classify_wqi(val):
+        if pd.isna(val):
+            return 'N/A'
+        for threshold, category in Config.WQI_CATEGORIES:
+            if val <= threshold:
+                return category
+        return 'Unsuitable'
+
+    df['WQI_Category'] = df['WQI'].apply(_classify_wqi)
+
+    # Summary
+    print(f"\n  WQI Statistics:")
+    print(f"    Range: [{df['WQI'].min():.2f}, {df['WQI'].max():.2f}]")
+    print(f"    Mean:  {df['WQI'].mean():.2f}")
+    print(f"    Std:   {df['WQI'].std():.2f}")
+    total = len(df)
+    cat_counts = df['WQI_Category'].value_counts()
+    print(f"\n  WQI Classification:")
+    for cat in ['Excellent', 'Good', 'Poor', 'Very Poor', 'Unsuitable']:
+        n = cat_counts.get(cat, 0)
+        print(f"    {cat:<15}: {n:>4} ({n/total*100:.1f}%)")
+
+    print(f"\n  WQI by Season:")
+    for s in Config.SEASON_ORDER:
+        sd = df[df['Season'] == s]
+        print(f"    {s:<15}: Mean={sd['WQI'].mean():.2f}, "
+              f"Range=[{sd['WQI'].min():.2f}, {sd['WQI'].max():.2f}]")
+        cat_s = sd['WQI_Category'].value_counts()
+        for cat in ['Excellent', 'Good', 'Poor', 'Very Poor', 'Unsuitable']:
+            n = cat_s.get(cat, 0)
+            if n > 0:
+                print(f"      {cat}: {n} ({n/len(sd)*100:.1f}%)")
+
+    # ---- WQI plots ----
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+
+    # Histogram
+    ax = axes[0]
+    for s in Config.SEASON_ORDER:
+        ax.hist(df[df['Season'] == s]['WQI'].dropna(), bins=15, alpha=0.5,
+                label=s, color=Config.SEASON_COLORS[s], edgecolor='k')
+    ax.set_xlabel('WQI'); ax.set_ylabel('Frequency')
+    ax.set_title('WQI Distribution by Season'); ax.legend()
+    for threshold, cat in Config.WQI_CATEGORIES[:4]:
+        ax.axvline(threshold, color='gray', ls='--', alpha=0.5)
+        ax.text(threshold + 2, ax.get_ylim()[1] * 0.9, cat, fontsize=7,
+                rotation=90, va='top')
+
+    # Box by season
+    ax = axes[1]
+    sns.boxplot(data=df, x='Season', y='WQI', order=Config.SEASON_ORDER,
+                palette=Config.SEASON_COLORS, ax=ax)
+    ax.set_title('WQI Boxplot by Season'); ax.set_ylabel('WQI')
+
+    # Category pie
+    ax = axes[2]
+    cat_colors = {'Excellent': '#27ae60', 'Good': '#3498db', 'Poor': '#f39c12',
+                  'Very Poor': '#e74c3c', 'Unsuitable': '#8e44ad'}
+    cats_present = [c for c in ['Excellent', 'Good', 'Poor', 'Very Poor', 'Unsuitable']
+                    if c in cat_counts.index]
+    if cats_present:
+        ax.pie([cat_counts[c] for c in cats_present], labels=cats_present,
+               autopct='%1.1f%%', colors=[cat_colors[c] for c in cats_present],
+               startangle=90)
+    ax.set_title('WQI Category Distribution')
+
+    fig.suptitle('Water Quality Index (WQI) Analysis', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    save_fig(fig, 'task4_safety', 'fig_wqi_analysis.png')
+
+    save_dataset(df[['Location_ID', 'Season', 'WQI', 'WQI_Category']].copy(),
+                 'wqi_results.csv')
+    return df
 
 
 # ============================================================================
@@ -1110,94 +1253,299 @@ def run_source_analysis(df):
 
 
 # ============================================================================
-# TASK 6: MACHINE LEARNING
+# TASK 6: MACHINE LEARNING (Enhanced: XGBoost, SHAP, Residuals, GA, Uncertainty)
 # ============================================================================
 def run_ml(df):
+    """Enhanced ML pipeline: XGBoost, SHAP analysis, residual diagnostics,
+    Generalization Ability, and uncertainty metrics (MAPE, NSE, RSR).
+    Methodology aligned with Sekar et al. (2025), Results in Engineering."""
     print(f"\n{'='*70}")
-    print("TASK 6: MACHINE LEARNING")
+    print("TASK 6: MACHINE LEARNING (Enhanced Pipeline)")
     print(f"{'='*70}")
 
     chem = Config.CHEM_COLS
     targets = Config.ML_TARGETS
-    features = [c for c in chem if c not in targets]
     season_map = {s: i for i, s in enumerate(Config.SEASON_ORDER)}
 
     dml = df.copy()
     dml['Season_num'] = dml['Season'].map(season_map)
-    feat_base = features + ['Season_num']
 
     models_dict = {
         'Random Forest': RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1),
+        'Gradient Boosting': GradientBoostingRegressor(n_estimators=200, max_depth=4,
+                                                        learning_rate=0.1, random_state=42),
+        'Neural Network': MLPRegressor(hidden_layer_sizes=(64, 32, 16), max_iter=2000,
+                                        random_state=42, early_stopping=True,
+                                        validation_fraction=0.15),
         'SVR': SVR(kernel='rbf', C=100, epsilon=0.1),
-        'Gradient Boosting': GradientBoostingRegressor(n_estimators=200, max_depth=4, learning_rate=0.1, random_state=42),
-        'Neural Network': MLPRegressor(hidden_layer_sizes=(64, 32, 16), max_iter=2000, random_state=42, early_stopping=True),
     }
+    if HAS_XGBOOST:
+        models_dict['XGBoost'] = XGBRegressor(
+            n_estimators=200, max_depth=4, learning_rate=0.1,
+            reg_alpha=0.1, reg_lambda=1.0,
+            random_state=42, verbosity=0, n_jobs=-1)
 
     ml_results = {}
+    all_residuals = {}
     kf = KFold(n_splits=Config.CV_FOLDS, shuffle=True, random_state=42)
 
     for target in targets:
         print(f"\n  TARGET: {target}")
-        fc = [f for f in feat_base if f != target]
-        dc = dml[fc + [target]].dropna()
-        X, y = dc[fc].values, dc[target].values
-        sX = StandardScaler(); Xn = sX.fit_transform(X)
-        sY = StandardScaler(); yn = sY.fit_transform(y.reshape(-1, 1)).ravel()
+        # Build feature list per-target
+        if target in chem:
+            co_targets = [t for t in targets if t != target and t in chem]
+            fc = [c for c in chem if c != target and c not in co_targets and c in dml.columns]
+        else:
+            fc = [c for c in chem if c in dml.columns]
+        fc_full = fc + ['Season_num']
+        dc = dml[fc_full + [target]].dropna()
+        if len(dc) < 20:
+            print(f"    [SKIP] Not enough data ({len(dc)} samples)")
+            continue
+        X, y = dc[fc_full].values, dc[target].values
+
+        # 80:20 Train/Test split (per Sekar et al., 2025)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=Config.RANDOM_SEED)
+
+        # StandardScaler
+        scaler_X = StandardScaler()
+        scaler_y = StandardScaler()
+        X_train_s = scaler_X.fit_transform(X_train)
+        X_test_s = scaler_X.transform(X_test)
+        y_train_s = scaler_y.fit_transform(y_train.reshape(-1, 1)).ravel()
 
         tres = {}
+        target_residuals = {}
         for name, model in models_dict.items():
-            scaled = name in ('SVR', 'Neural Network')
-            Xu, yu = (Xn, yn) if scaled else (X, y)
-            cv_r2 = cross_val_score(model, Xu, yu, cv=kf, scoring='r2')
-            m = clone(model); m.fit(Xu, yu); yp = m.predict(Xu)
-            if scaled:
-                ypo = sY.inverse_transform(yp.reshape(-1, 1)).ravel()
-                r2, rmse, mae = r2_score(y, ypo), np.sqrt(mean_squared_error(y, ypo)), mean_absolute_error(y, ypo)
+            m = clone(model)
+            needs_scale = name in ('SVR', 'Neural Network')
+            Xtr = X_train_s if needs_scale else X_train
+            Xte = X_test_s if needs_scale else X_test
+            ytr = y_train_s if needs_scale else y_train
+
+            m.fit(Xtr, ytr)
+            yp_train_raw = m.predict(Xtr)
+            yp_test_raw = m.predict(Xte)
+
+            if needs_scale:
+                yp_train_o = scaler_y.inverse_transform(yp_train_raw.reshape(-1, 1)).ravel()
+                yp_test_o = scaler_y.inverse_transform(yp_test_raw.reshape(-1, 1)).ravel()
             else:
-                r2, rmse, mae = r2_score(y, yp), np.sqrt(mean_squared_error(y, yp)), mean_absolute_error(y, yp)
-            tres[name] = {'CV_R2': cv_r2.mean(), 'CV_std': cv_r2.std(), 'R2': r2, 'RMSE': rmse, 'MAE': mae}
+                yp_train_o = yp_train_raw
+                yp_test_o = yp_test_raw
+
+            # Train metrics
+            r2_tr = r2_score(y_train, yp_train_o)
+            rmse_tr = np.sqrt(mean_squared_error(y_train, yp_train_o))
+            mae_tr = mean_absolute_error(y_train, yp_train_o)
+            mse_tr = mean_squared_error(y_train, yp_train_o)
+            # Test metrics
+            r2_te = r2_score(y_test, yp_test_o)
+            rmse_te = np.sqrt(mean_squared_error(y_test, yp_test_o))
+            mae_te = mean_absolute_error(y_test, yp_test_o)
+            mse_te = mean_squared_error(y_test, yp_test_o)
+            # MAPE
+            safe_y = np.where(np.abs(y_test) < 1e-8, 1, y_test)
+            mape = np.mean(np.abs((y_test - yp_test_o) / safe_y)) * 100
+            # NSE (Nash-Sutcliffe Efficiency)
+            ss_res = np.sum((y_test - yp_test_o) ** 2)
+            ss_tot = np.sum((y_test - np.mean(y_test)) ** 2)
+            nse = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            # RSR (RMSE-observations Standard deviation Ratio)
+            rsr = rmse_te / np.std(y_test) if np.std(y_test) > 0 else np.inf
+            # GA (Generalization Ability) = Test R2 / Train R2
+            ga = r2_te / r2_tr if r2_tr > 0 else 0
+            # Cross-validation on training set
+            cv_r2 = cross_val_score(clone(model), Xtr, ytr, cv=kf, scoring='r2')
+
+            tres[name] = {
+                'CV_R2': cv_r2.mean(), 'CV_std': cv_r2.std(),
+                'R2_train': r2_tr, 'R2_test': r2_te,
+                'RMSE_train': rmse_tr, 'RMSE_test': rmse_te,
+                'MAE_train': mae_tr, 'MAE_test': mae_te,
+                'MSE_train': mse_tr, 'MSE_test': mse_te,
+                'MAPE': mape, 'NSE': nse, 'RSR': rsr, 'GA': ga,
+            }
+            target_residuals[name] = {
+                'y_test': y_test, 'yp_test': yp_test_o,
+                'y_train': y_train, 'yp_train': yp_train_o,
+            }
+
             fi_str = ''
             if hasattr(m, 'feature_importances_'):
-                fi = sorted(zip(fc, m.feature_importances_), key=lambda x: -x[1])[:3]
-                fi_str = f" Top: {', '.join(f'{n}={v:.3f}' for n,v in fi)}"
-            print(f"    {name}: CV_R2={cv_r2.mean():.4f}+/-{cv_r2.std():.4f} R2={r2:.4f} RMSE={rmse:.1f}{fi_str}")
+                fi = sorted(zip(fc_full, m.feature_importances_), key=lambda x: -x[1])[:3]
+                fi_str = f"  Top: {', '.join(f'{n}={v:.3f}' for n, v in fi)}"
+            print(f"    {name}:")
+            print(f"      Train  R2={r2_tr:.4f}  RMSE={rmse_tr:.1f}  MAE={mae_tr:.1f}")
+            print(f"      Test   R2={r2_te:.4f}  RMSE={rmse_te:.1f}  MAE={mae_te:.1f}")
+            print(f"      CV_R2={cv_r2.mean():.4f} +/- {cv_r2.std():.4f}")
+            print(f"      GA={ga:.3f}  MAPE={mape:.1f}%  NSE={nse:.3f}  RSR={rsr:.3f}{fi_str}")
 
         ml_results[target] = tres
+        all_residuals[target] = target_residuals
         best = max(tres.items(), key=lambda x: x[1]['CV_R2'])
-        print(f"    * Best: {best[0]} (CV_R2={best[1]['CV_R2']:.4f})")
+        print(f"    >>> Best for {target}: {best[0]} (CV_R2={best[1]['CV_R2']:.4f})")
 
-    # Feature importance
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    for ti, target in enumerate(targets):
+    # ===================== PERFORMANCE SUMMARY TABLE =====================
+    avail_targets = [t for t in targets if t in ml_results]
+    print(f"\n  {'='*80}")
+    print(f"  MODEL PERFORMANCE SUMMARY (Train / Test / Uncertainty)")
+    print(f"  {'='*80}")
+    print(f"  {'Model':<20} {'Target':<6} {'R2_Tr':>7} {'R2_Te':>7} {'RMSE':>7} {'GA':>6} {'NSE':>6} {'MAPE%':>7} {'RSR':>6}")
+    print(f"  {'-'*78}")
+    for target in avail_targets:
+        for name, r in ml_results[target].items():
+            print(f"  {name:<20} {target:<6} {r['R2_train']:>7.4f} {r['R2_test']:>7.4f} "
+                  f"{r['RMSE_test']:>7.1f} {r['GA']:>6.3f} {r['NSE']:>6.3f} {r['MAPE']:>6.1f}% {r['RSR']:>6.3f}")
+
+    # ===================== FEATURE IMPORTANCE =====================
+    n_targets = len(avail_targets)
+    fig, axes = plt.subplots(1, n_targets, figsize=(7 * n_targets, 6))
+    if n_targets == 1:
+        axes = [axes]
+    for ti, target in enumerate(avail_targets):
         ax = axes[ti]
-        fc = [f for f in feat_base if f != target]
-        dc = dml[fc + [target]].dropna()
+        if target in chem:
+            co_t = [t for t in targets if t != target and t in chem]
+            fc_plot = [c for c in chem if c != target and c not in co_t and c in dml.columns] + ['Season_num']
+        else:
+            fc_plot = [c for c in chem if c in dml.columns] + ['Season_num']
+        dc_plot = dml[fc_plot + [target]].dropna()
         rf = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)
-        rf.fit(dc[fc].values, dc[target].values)
-        fi = pd.DataFrame({'F': fc, 'I': rf.feature_importances_}).sort_values('I')
-        ax.barh(fi['F'], fi['I'], color='steelblue', edgecolor='navy')
-        ax.set_title(f'RF Importance - {target}')
+        rf.fit(dc_plot[fc_plot].values, dc_plot[target].values)
+        fi_df = pd.DataFrame({'F': fc_plot, 'I': rf.feature_importances_}).sort_values('I')
+        ax.barh(fi_df['F'], fi_df['I'], color='steelblue', edgecolor='navy')
+        ax.set_title(f'RF Feature Importance - {target}', fontweight='bold')
+        ax.set_xlabel('Importance')
     plt.tight_layout()
     save_fig(fig, 'task6_ml', 'fig_feature_importance.png')
 
-    # Actual vs Predicted
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
-    for ti, target in enumerate(targets):
-        fc = [f for f in feat_base if f != target]
-        dc = dml[fc + [target]].dropna()
-        X, y = dc[fc].values, dc[target].values
-        for mi, (mn, clr) in enumerate([('RF', 'steelblue'), ('GB', 'darkorange')]):
-            ax = axes[ti, mi]
-            m = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1) if mn == 'RF' else GradientBoostingRegressor(n_estimators=200, max_depth=4, random_state=42)
-            m.fit(X, y); yp = m.predict(X)
-            ax.scatter(y, yp, c=clr, s=40, alpha=0.6, edgecolors='k')
-            lm = [min(y.min(), yp.min()), max(y.max(), yp.max())]
-            ax.plot(lm, lm, 'r--', lw=2)
-            ax.set_xlabel(f'Actual {target}'); ax.set_ylabel(f'Predicted')
-            ax.set_title(f'{mn}: {target} (R2={r2_score(y, yp):.3f})')
-    fig.suptitle('Actual vs Predicted', fontsize=14)
-    plt.tight_layout()
-    save_fig(fig, 'task6_ml', 'fig_actual_vs_predicted.png')
+    # ===================== SHAP ANALYSIS =====================
+    if HAS_SHAP:
+        print("\n  --- SHAP Feature Importance Analysis ---")
+        tree_names = [n for n in ['Random Forest', 'Gradient Boosting']
+                      + (['XGBoost'] if HAS_XGBOOST else []) if n in models_dict]
+        for target in avail_targets:
+            if target in chem:
+                co_t = [t for t in targets if t != target and t in chem]
+                fc_sh = [c for c in chem if c != target and c not in co_t and c in dml.columns] + ['Season_num']
+            else:
+                fc_sh = [c for c in chem if c in dml.columns] + ['Season_num']
+            dc_sh = dml[fc_sh + [target]].dropna()
+            X_sh = dc_sh[fc_sh].values
+
+            # SHAP bar comparison across tree models
+            n_trees = len(tree_names)
+            fig_sh, axes_sh = plt.subplots(1, n_trees, figsize=(7 * n_trees, 6))
+            if n_trees == 1:
+                axes_sh = [axes_sh]
+            for mi, mname in enumerate(tree_names):
+                ax = axes_sh[mi]
+                m_sh = clone(models_dict[mname])
+                m_sh.fit(X_sh, dc_sh[target].values)
+                try:
+                    explainer = shap.TreeExplainer(m_sh)
+                    sv = explainer.shap_values(X_sh)
+                    mean_shap = np.abs(sv).mean(axis=0)
+                    idx_sorted = np.argsort(mean_shap)
+                    ax.barh([fc_sh[i] for i in idx_sorted], mean_shap[idx_sorted],
+                            color='coral', edgecolor='k')
+                    ax.set_title(f'SHAP - {mname}\n({target})', fontweight='bold')
+                    ax.set_xlabel('Mean |SHAP value|')
+                except Exception as e:
+                    ax.text(0.5, 0.5, f'SHAP unavailable:\n{e}', transform=ax.transAxes,
+                            ha='center', va='center', fontsize=9)
+                    ax.set_title(f'{mname} ({target})')
+            plt.tight_layout()
+            save_fig(fig_sh, 'task6_ml', f'fig_shap_{target.lower()}.png')
+
+            # Beeswarm summary for best tree model
+            best_tree_name = max(
+                ((n, ml_results[target][n]) for n in tree_names if n in ml_results.get(target, {})),
+                key=lambda x: x[1]['CV_R2'], default=(None, None))[0]
+            if best_tree_name:
+                try:
+                    m_best = clone(models_dict[best_tree_name])
+                    m_best.fit(X_sh, dc_sh[target].values)
+                    explainer = shap.TreeExplainer(m_best)
+                    sv = explainer.shap_values(X_sh)
+                    shap.summary_plot(sv, X_sh, feature_names=fc_sh, show=False)
+                    fig_bee = plt.gcf()
+                    fig_bee.suptitle(f'SHAP Summary - {best_tree_name} ({target})', fontsize=12)
+                    plt.tight_layout()
+                    spath = Config.FIGURE_DIR / 'task6_ml' / f'fig_shap_summary_{target.lower()}.png'
+                    fig_bee.savefig(spath, dpi=Config.SAVE_DPI, bbox_inches='tight')
+                    plt.close(fig_bee)
+                    print(f"  [FIG] figures/task6_ml/fig_shap_summary_{target.lower()}.png")
+                except Exception as e:
+                    print(f"  [WARN] SHAP summary for {target} failed: {e}")
+    else:
+        print("\n  [SKIP] SHAP analysis - install shap: pip install shap")
+
+    # ===================== ACTUAL vs PREDICTED =====================
+    for target in avail_targets:
+        rd = all_residuals[target]
+        n_mod = len(rd)
+        fig, axes_ap = plt.subplots(1, n_mod, figsize=(5 * n_mod, 5))
+        if n_mod == 1:
+            axes_ap = [axes_ap]
+        for mi, (name, d) in enumerate(rd.items()):
+            ax = axes_ap[mi]
+            ax.scatter(d['y_train'], d['yp_train'], c='lightgray', s=15, alpha=0.3, label='Train')
+            ax.scatter(d['y_test'], d['yp_test'], c='steelblue', s=40, alpha=0.7,
+                       edgecolors='k', label='Test')
+            lo = min(d['y_train'].min(), d['y_test'].min(), d['yp_train'].min(), d['yp_test'].min())
+            hi = max(d['y_train'].max(), d['y_test'].max(), d['yp_train'].max(), d['yp_test'].max())
+            ax.plot([lo, hi], [lo, hi], 'r--', lw=2)
+            ax.set_xlabel(f'Actual {target}'); ax.set_ylabel('Predicted')
+            ax.set_title(f'{name}\nR2={ml_results[target][name]["R2_test"]:.3f}', fontsize=10)
+            ax.legend(fontsize=7)
+        fig.suptitle(f'Actual vs Predicted - {target}', fontsize=13, fontweight='bold')
+        plt.tight_layout()
+        save_fig(fig, 'task6_ml', f'fig_actual_vs_predicted_{target.lower()}.png')
+
+    # ===================== RESIDUAL ANALYSIS =====================
+    print("\n  --- Residual Analysis ---")
+    for target in avail_targets:
+        rd = all_residuals[target]
+        n_mod = len(rd)
+        fig, axes_r = plt.subplots(2, n_mod, figsize=(5 * n_mod, 10))
+        if n_mod == 1:
+            axes_r = axes_r.reshape(2, 1)
+        for mi, (name, d) in enumerate(rd.items()):
+            resid = d['y_test'] - d['yp_test']
+            # Scatter
+            axes_r[0, mi].scatter(d['yp_test'], resid, c='steelblue', s=40, alpha=0.7, edgecolors='k')
+            axes_r[0, mi].axhline(0, color='red', ls='--', lw=1.5)
+            axes_r[0, mi].set_xlabel(f'Predicted {target}')
+            axes_r[0, mi].set_ylabel('Residual')
+            axes_r[0, mi].set_title(name, fontsize=10)
+            # Histogram
+            axes_r[1, mi].hist(resid, bins=15, color='steelblue', edgecolor='k', alpha=0.7, density=True)
+            mu_r, sig_r = np.mean(resid), np.std(resid)
+            axes_r[1, mi].set_xlabel('Residual')
+            axes_r[1, mi].set_ylabel('Density')
+            axes_r[1, mi].set_title(f'mean={mu_r:.2f}, std={sig_r:.2f}', fontsize=10)
+        fig.suptitle(f'Residual Analysis - {target}', fontsize=13, fontweight='bold')
+        plt.tight_layout()
+        save_fig(fig, 'task6_ml', f'fig_residuals_{target.lower()}.png')
+
+    # ===================== GA & UNCERTAINTY TABLE =====================
+    print(f"\n  {'='*70}")
+    print(f"  GENERALIZATION ABILITY & UNCERTAINTY ANALYSIS")
+    print(f"  {'='*70}")
+    print(f"  GA > 0.9 = Excellent | 0.7-0.9 = Good | < 0.7 = Weak")
+    print(f"  NSE > 0.75 = Very Good | 0.36-0.75 = Satisfactory | < 0.36 = Unsatisfactory")
+    print(f"  RSR < 0.50 = Very Good | 0.50-0.70 = Good | > 0.70 = Unsatisfactory")
+    print()
+    print(f"  {'Model':<20} {'Target':<6} {'GA':>6} {'MAPE%':>7} {'NSE':>7} {'RSR':>7} {'CV_std':>7}")
+    print(f"  {'-'*65}")
+    for target in avail_targets:
+        for name, r in ml_results[target].items():
+            print(f"  {name:<20} {target:<6} {r['GA']:>6.3f} {r['MAPE']:>6.1f}% "
+                  f"{r['NSE']:>7.3f} {r['RSR']:>7.3f} {r['CV_std']:>7.4f}")
+
     return ml_results
 
 
@@ -1240,6 +1588,7 @@ def generate_insights(df, ml_results):
     na_r = (df['Na'] / (df['Na'] + df['Ca'])).mean()
     bt = max(ml_results.get('TDS', {}).items(), key=lambda x: x[1]['CV_R2'], default=('N/A', {'CV_R2': 0}))
     be = max(ml_results.get('EC', {}).items(), key=lambda x: x[1]['CV_R2'], default=('N/A', {'CV_R2': 0}))
+    bw = max(ml_results.get('WQI', {}).items(), key=lambda x: x[1]['CV_R2'], default=('N/A', {'CV_R2': 0}))
 
     # Radar
     fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(polar=True))
@@ -1267,6 +1616,9 @@ def generate_insights(df, ml_results):
     print(f"  Mechanism: {'Rock weathering' if na_r < 0.5 else 'Evaporation/Mixed'}")
     print(f"  Best ML (TDS): {bt[0]} (CV R2={bt[1]['CV_R2']:.4f})")
     print(f"  Best ML (EC):  {be[0]} (CV R2={be[1]['CV_R2']:.4f})")
+    print(f"  Best ML (WQI): {bw[0]} (CV R2={bw[1]['CV_R2']:.4f})")
+    if 'WQI' in df.columns:
+        print(f"  WQI: Mean={df['WQI'].mean():.1f}, Range=[{df['WQI'].min():.1f}, {df['WQI'].max():.1f}]")
     print(f"\n  IS 10500:2012 Compliance Status: EVALUATED")
     print(f"  Reference: {Config.IS_10500_CITATION}")
     print(f"  Supplementary: {Config.WHO_CITATION}")
@@ -1296,6 +1648,9 @@ def main():
     df_combined = validate_data(df_combined, "Combined")
     save_dataset(df_original, 'validated_original.csv')
     save_dataset(df_combined, 'validated_combined.csv')
+
+    # WQI Computation
+    df_combined = compute_wqi(df_combined)
 
     # Task 3
     run_eda_and_seasonal(df_combined)

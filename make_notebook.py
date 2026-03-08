@@ -78,12 +78,13 @@ md_titles = {
     "TASK 1": "## 4. Task 1: Data Loading & Cleaning",
     "SYNTHETIC": "## 5. Synthetic Data Generation",
     "TASK 2": "## 6. Task 2: Data Validation",
-    "TASK 3": "## 7. Task 3: EDA & Seasonal Dynamics",
-    "TASK 4": "## 8. Task 4: Drinking Water Risk Intelligence (IS 10500:2012)",
-    "TASK 5": "## 9. Task 5: Source Analysis",
-    "TASK 6": "## 10. Task 6: Machine Learning",
-    "TASK 7": "## 11. Task 7: Scientific Insights",
-    "MAIN": "## 12. Run Pipeline",
+    "WQI COMPUTATION": "## 7. WQI Computation (Weight-based Water Quality Index)",
+    "TASK 3": "## 8. Task 3: EDA & Seasonal Dynamics",
+    "TASK 4": "## 9. Task 4: Drinking Water Risk Intelligence (IS 10500:2012)",
+    "TASK 5": "## 10. Task 5: Source Analysis",
+    "TASK 6": "## 11. Task 6: Machine Learning (Enhanced: XGBoost, SHAP, GA, Uncertainty)",
+    "TASK 7": "## 12. Task 7: Scientific Insights",
+    "MAIN": "## 13. Run Pipeline",
 }
 
 for title, section_lines in sections:
