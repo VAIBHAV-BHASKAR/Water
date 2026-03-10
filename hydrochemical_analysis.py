@@ -477,7 +477,7 @@ def generate_synthetic_data(df_original, n_per_season=None):
     np.random.seed(Config.RANDOM_SEED)
 
     print("\n" + "=" * 70)
-    print("SYNTHETIC DATA GENERATION")
+    print("SYNTHETIC DATA GENERATION (with controlled noise injection)")
     print("=" * 70)
 
     chem = Config.CHEM_COLS
@@ -490,18 +490,70 @@ def generate_synthetic_data(df_original, n_per_season=None):
         'DO': (2.0, 12.0)
     }
 
+    # ── Noise injection parameters ──
+    COV_INFLATION    = 1.40   # inflate covariance diagonal by 40%
+    MEAN_JITTER_FRAC = 0.06   # perturb each mean by ±6% of original std
+    INDEP_NOISE_FRAC = 0.08   # add 8% independent Gaussian noise (of original std)
+    OUTLIER_FRAC     = 0.05   # 5% of synthetic samples get extra perturbation
+    OUTLIER_SCALE    = 2.5    # outlier perturbation magnitude (× std)
+
     locations = df_original['Location_ID'].unique()
     sites_map = df_original.drop_duplicates('Location_ID').set_index('Location_ID')[
         ['Sites', 'Areas', 'Latitude', 'Longitude']]
 
+    synthetic_clean_dfs = []   # clean (no-noise) versions
     synthetic_dfs = []
     for season in Config.SEASON_ORDER:
-        print(f"\n  Generating {n_per_season} synthetic samples for {season}...")
+        print(f"\n  Generating {n_per_season} noisy synthetic samples for {season}...")
         sdata = df_original[df_original['Season'] == season][chem].dropna()
         mean_vec = sdata.mean().values
-        cov_mat = sdata.cov().values + np.eye(len(chem)) * 1e-4
+        std_vec  = sdata.std().values
+        cov_mat  = sdata.cov().values
 
-        raw = np.random.multivariate_normal(mean_vec, cov_mat, size=n_per_season)
+        # ── Clean (no-noise) synthetic: exact multivariate Gaussian ──
+        cov_clean = cov_mat.copy()
+        cov_clean += np.eye(len(chem)) * 1e-4           # positive-definiteness only
+        raw_clean = np.random.multivariate_normal(mean_vec, cov_clean,
+                                                  size=n_per_season)
+
+        # ── Noisy synthetic: 5-layer noise injection ──
+        # 1) Inflate covariance diagonal → wider spread around mean
+        cov_inflated = cov_mat.copy()
+        np.fill_diagonal(cov_inflated,
+                         np.diag(cov_inflated) * COV_INFLATION)
+        cov_inflated += np.eye(len(chem)) * 1e-4       # positive-definiteness
+
+        # 2) Jitter the mean vector so synthetic is not perfectly centred
+        mean_jitter = mean_vec + np.random.uniform(
+            -MEAN_JITTER_FRAC, MEAN_JITTER_FRAC, size=len(chem)) * std_vec
+
+        # 3) Sample from inflated distribution
+        raw = np.random.multivariate_normal(mean_jitter, cov_inflated,
+                                            size=n_per_season)
+
+        # 4) Add independent (uncorrelated) Gaussian noise per parameter
+        indep_noise = np.random.normal(0, INDEP_NOISE_FRAC * std_vec,
+                                       size=raw.shape)
+        raw += indep_noise
+
+        # 5) Inject outlier-like perturbations into a small fraction
+        n_outliers = max(1, int(n_per_season * OUTLIER_FRAC))
+        outlier_idx = np.random.choice(n_per_season, n_outliers, replace=False)
+        for idx in outlier_idx:
+            # perturb 2-4 random parameters by ±OUTLIER_SCALE × std
+            n_params_hit = np.random.randint(2, 5)
+            cols_hit = np.random.choice(len(chem), n_params_hit, replace=False)
+            for c in cols_hit:
+                direction = np.random.choice([-1, 1])
+                raw[idx, c] += direction * OUTLIER_SCALE * std_vec[c] * np.random.uniform(0.3, 1.0)
+
+        # ── Build clean DataFrame (same bounds clipping) ──
+        df_clean = pd.DataFrame(raw_clean, columns=chem)
+        for col in chem:
+            if col in bounds:
+                df_clean[col] = df_clean[col].clip(bounds[col][0], bounds[col][1])
+            df_clean[col] = df_clean[col].round(2 if col not in ('F', 'Iron') else 3)
+
         df_syn = pd.DataFrame(raw, columns=chem)
 
         for col in chem:
@@ -526,15 +578,19 @@ def generate_synthetic_data(df_original, n_per_season=None):
                 syn_lats.append(df_original['Latitude'].mean() + np.random.uniform(-0.05, 0.05))
                 syn_longs.append(df_original['Longitude'].mean() + np.random.uniform(-0.05, 0.05))
 
-        df_syn['Sl_No'] = range(1, n_per_season + 1)
-        df_syn['Sites'] = syn_sites
-        df_syn['Areas'] = syn_areas
-        df_syn['Location_ID'] = syn_ids
-        df_syn['Latitude'] = syn_lats
-        df_syn['Longitude'] = syn_longs
-        df_syn['Season'] = season
+        # Assign metadata to both clean and noisy DataFrames
+        for _df in (df_syn, df_clean):
+            _df['Sl_No'] = range(1, n_per_season + 1)
+            _df['Sites'] = syn_sites
+            _df['Areas'] = syn_areas
+            _df['Location_ID'] = syn_ids
+            _df['Latitude'] = syn_lats
+            _df['Longitude'] = syn_longs
+            _df['Season'] = season
         df_syn['Data_Type'] = 'Synthetic'
+        df_clean['Data_Type'] = 'Synthetic_Clean'
         synthetic_dfs.append(df_syn)
+        synthetic_clean_dfs.append(df_clean)
         print(f"    TDS: [{df_syn['TDS'].min():.1f}, {df_syn['TDS'].max():.1f}]  "
               f"pH: [{df_syn['pH'].min():.2f}, {df_syn['pH'].max():.2f}]")
 
@@ -556,7 +612,10 @@ def generate_synthetic_data(df_original, n_per_season=None):
     print(f"\n  Synthetic: {len(df_synthetic)} | Original: {len(df_orig_tagged)} | Combined: {len(df_combined)}")
 
     # Save all
-    save_dataset(df_synthetic, 'synthetic_only.csv')
+    df_synthetic_clean = pd.concat(synthetic_clean_dfs, ignore_index=True)
+    save_dataset(df_synthetic_clean, 'synthetic_clean.csv')   # no-noise version
+    save_dataset(df_synthetic, 'synthetic_noisy.csv')          # noisy version
+    save_dataset(df_synthetic, 'synthetic_only.csv')           # backward compat
     save_dataset(df_combined, 'synthetic.csv')
 
     # Distribution comparison table
