@@ -47,3 +47,17 @@ End result should be a clearly labeled report suitable for academic or regulator
 
 Apply the above process to the following water quality dataset:  
 [PASTE YOUR DATASET HERE]
+
+8. Provide detailed interpretation of the figures, explaining the trends, relationships, and significance of the results shown in the graphs.
+
+9. Prepare and email the Water Quality Index (WQI) table containing all data points. The values should be verified against manually calculated WQI results to ensure accuracy.
+
+10. Devise a method to justify and defend the augmented dataset, demonstrating that it remains consistent, valid, and statistically comparable to the original dataset.
+
+11. Ensure that all figures are properly labeled.
+
+12. Add X-axis labels clearly indicating the variable represented.
+
+13. Examine and explain the scaled values of the probability distribution on the Y-axis.
+
+14. Email the final WQI figures/plots, ensuring they are properly labeled, interpreted, and ready for review.
