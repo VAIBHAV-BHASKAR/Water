@@ -1,0 +1,49 @@
+Figure,Path,Figure_Type,Key_Finding,Source_Attribution,Confidence
+1.1 Original vs Synthetic Histograms,figures/task1_cleaning/fig_original_vs_synthetic.png,Overlay Histogram (Probability Density),All 16 parameters PASS KS-test; Cohen's d=0.077; correlation preservation 92.6%,N/A - Data Validation,High
+1.2 Publication Original vs Synthetic,fig_original_vs_synthetic_publication.png,Overlay Histogram (Publication),Same as 1.1 with journal-quality formatting,N/A - Data Validation,High
+2.1 Missing Values (Original),figures/task2_validation/fig_missing_original.png,Binary Heatmap,Zero missing values in 45 original samples (0/720 cells),N/A - Data Validation,High
+2.2 Missing Values (Combined),figures/task2_validation/fig_missing_combined.png,Binary Heatmap,Zero missing values in 195 combined samples (0/3120 cells),N/A - Data Validation,High
+2.3 Missing Values Heatmap,figures/task2_validation/fig_missing_values_heatmap.png,Heatmap,100% data completeness confirmed,N/A - Data Validation,High
+2.4 QQ Defense Plots,figures/task2_validation/fig_synthetic_defense.png,QQ Scatter (16 panels),16/16 KS-test PASS; PCA alignment 0.914; Mahalanobis 0.414,N/A - Synthetic Defense,Very High
+2.5 Correlation Preservation,figures/task2_validation/fig_correlation_preservation.png,Triple Heatmap,>92.6% correlation preserved; all pairs <0.10 absolute difference,N/A - Synthetic Defense,High
+2.6 Defense Summary,figures/task2_validation/fig_defense_summary.png,Dashboard,All 8 CMGP defense tests PASS,N/A - Synthetic Defense,Very High
+3.1 Seasonal Boxplots,figures/task3_seasonal/fig_seasonal_boxplots.png,Boxplot (16 panels),All 16 parameters significant (p<0.05); TH +497% monsoon; K +122% monsoon,Mixed (Geogenic weathering + Anthropogenic mobilization),High
+3.2 Seasonal Violins,figures/task3_seasonal/fig_seasonal_violins.png,Violin Plot (16 panels),Bimodal EC/TDS during monsoon; narrow pH distribution confirming uniform acidity,Mixed,High
+3.3 Seasonal Trends,figures/task3_seasonal/fig_seasonal_trends.png,Line/Trend Plot,V-shaped EC/TDS/Na/K; J-shaped NO3 (delayed postmonsoon rise +35.3%),Mixed,High
+3.4 Seasonal Heatmap,figures/task3_seasonal/fig_seasonal_heatmap.png,Normalized Heatmap,Monsoon = hot band for mineralization; Postmonsoon hot for NO3/F,Mixed,High
+3.5 Parameter Distributions,figures/task3_seasonal/fig_distributions.png,KDE Histogram,TDS mode shift Pre(250)->Mon(400); NO3 rightward skew postmonsoon,Mixed,High
+3.6 Correlation Matrix,figures/task3_seasonal/fig_correlation_matrix.png,16x16 Heatmap,EC-TDS r=0.898; EC-Na r=0.732; DO-TDS r=-0.31,Mixed (mineralization axis),High
+3.7 Pairplot,figures/task3_seasonal/fig_pairplot.png,Scatter Matrix,Monsoon samples occupy upper-right quadrant (high EC/TDS/Na),Mixed,Moderate-High
+3.8 Publication Pairplot,figures/task3_seasonal/fig_pairplot_publication.png,Scatter Matrix (Publication),Same as 3.7 with journal formatting,Mixed,Moderate-High
+4.1 IS 10500 Compliance Bars,figures/task4_safety/fig_is10500_compliance_bars.png,Grouped Bar Chart,pH 75.4% unsafe; Iron 45.1%; K 28.2%; NO3 11.8%; only 6.7% samples safe,Geogenic (pH/Iron) + Anthropogenic (NO3/K),Very High
+4.2 IS 10500 Compliance Heatmap,figures/task4_safety/fig_is10500_compliance_heatmap.png,Categorical Heatmap,IA-1 monsoon worst (4 unsafe params); pervasive pH red band; 89.2% unsafe overall,Mixed,Very High
+4.3 IS 10500 Exceedance Factor,figures/task4_safety/fig_is10500_exceedance_factor.png,Bar Chart,NO3 max EF=2.12 (IA-1 Mon); Iron max EF=1.93 (DY-3 Mon),Geogenic (Iron) + Anthropogenic (NO3),Very High
+4.4 WQI Analysis,figures/task4_safety/fig_wqi_analysis.png,Multi-panel (Hist+Box+Pie),WQI range 30.8-77.0; mean 51.8; 39.5% Excellent / 60.5% Good; 0% Poor,Mixed,High
+5.1 Piper Diagram,figures/task5_source/fig_piper_diagram.png,Ternary + Diamond,Seasonal facies evolution: HCO3-dominant (Pre) -> Cl-dominant (Post); Ca-Cl overall,Geogenic baseline -> Anthropogenic overprint,High
+5.2 Piper Ternary,figures/task5_source/fig_piper_ternary.png,Ternary + Diamond,IA samples toward Cl-rich corner; PD near HCO3 apex,IA=Anthropogenic Cl; PD=Geogenic,High
+5.3 Gibbs Diagram,figures/task5_source/fig_gibbs_diagram.png,Gibbs Scatter,100% Rock-Water Interaction dominance,Geogenic (mechanism),High
+5.4 Ionic Ratios,figures/task5_source/fig_ionic_ratios.png,4-panel Scatter (meq/L),Na/Cl: Mon=1.36 (silicate) Post=0.51 (reverse IE); Ca/Mg>2 (silicate weathering),Geogenic (silicate weathering) + Anthropogenic (Cl excess),High
+5.5 Ionic Scatter 9-Panel,figures/task5_source/fig_ionic_scatter_9panel.png,9-panel Scatter (meq/L),NO3/Cl higher at IA/DY; Ca/SO4>>1 (no gypsum); 77.8% Mixed attribution,Mixed (35/45 Mixed; 10/45 Geogenic),High
+5.6 PCA Scree,figures/task5_source/fig_pca_scree.png,Bar + Cumulative Line,PC1=29.3% (mineralization); 5 PCs by Kaiser (67.4% cumulative),Mixed (PC1=mineralization; PC4=Iron geogenic),High
+5.7 PCA Biplot,figures/task5_source/fig_pca_biplot.png,Biplot (scores+loadings),EC/TDS/Ca/Na cluster right (mineralization); HCO3 up (weathering); NO3/Cl down (anthropogenic),PC1=Mixed; PC2 separates Geogenic vs Anthropogenic,High
+5.8 PCA Loadings,figures/task5_source/fig_pca_loadings.png,Bar Chart (4 panels),PC1: EC(0.42)/TDS(0.42); PC2: HCO3(0.49); PC3: Mg(0.51); PC4: Iron(0.63),Mapped to geochemical processes,High
+5.9 PCA Loadings Heatmap,figures/task5_source/fig_pca_loadings_heatmap.png,Heatmap (14×5),Iron on PC4 = 0.793 (brightest cell); EC/TDS on PC1 equally dominant,PC4=Geogenic (Iron/laterite),High
+5.10 Elbow Plot,figures/task5_source/fig_elbow.png,WCSS vs k,Optimal k=3; clusters map to seasonal chemistry,Seasonal control dominates,High
+5.11 K-Means Elbow,figures/task5_source/fig_kmeans_elbow.png,WCSS + Silhouette,k=3 confirmed by both elbow and silhouette methods,Seasonal control dominates,High
+5.12 K-Means PCA,figures/task5_source/fig_kmeans_pca.png,Scatter (PC1 vs PC2),Cluster 0=monsoon(high min.); Cluster 1=premonsoon(low min.); Cluster 2=postmonsoon(high NO3),Geogenic (Cl.0/1) + Anthropogenic (Cl.2 NO3),High
+5.13 Dendrogram,figures/task5_source/fig_dendrogram.png,Hierarchical Dendrogram,2-3 major branches; first split=premonsoon vs monsoon/postmonsoon,Seasonal chemistry structure,High
+6.1 Feature Importance,figures/task6_ml/fig_feature_importance.png,Horizontal Bar (3 panels),TDS: Ca(0.42)/Na(0.29); EC: Na(0.46)/Ca(0.21); WQI: EC(0.45)/NO3(0.14)/Iron(0.13),TDS/EC=Geogenic(Ca/Na); WQI=Mixed(EC+NO3+Iron),Moderate-High
+6.2 Actual vs Predicted TDS,figures/task6_ml/fig_actual_vs_predicted_tds.png,Scatter + 1:1 Line,RF: R2=0.764 test; RMSE=49.3; CV_R2=0.753; GA=0.788,N/A - ML Performance,High
+6.3 Actual vs Predicted EC,figures/task6_ml/fig_actual_vs_predicted_ec.png,Scatter + 1:1 Line,RF: R2=0.757 test; RMSE=67.6; CV_R2=0.771; MAPE=8.8%,N/A - ML Performance,High
+6.4 Actual vs Predicted WQI,figures/task6_ml/fig_actual_vs_predicted_wqi.png,Scatter + 1:1 Line,NN: R2=0.936 test; RMSE=2.1; CV_R2=0.945; GA=0.946,N/A - ML Performance,High
+6.5 Residuals TDS,figures/task6_ml/fig_residuals_tds.png,Residual Scatter,No systematic bias; mild heteroscedasticity at high TDS; RMSE=49.3,N/A - ML Diagnostics,High
+6.6 Residuals EC,figures/task6_ml/fig_residuals_ec.png,Residual Scatter,No systematic bias; RMSE=67.6; proportionally better than TDS (MAPE 8.8%),N/A - ML Diagnostics,High
+6.7 Residuals WQI,figures/task6_ml/fig_residuals_wqi.png,Residual Scatter,Tightest residuals (RMSE=2.1); no heteroscedasticity; cleanest pattern,N/A - ML Diagnostics,High
+6.8 SHAP TDS,figures/task6_ml/fig_shap_tds.png,SHAP Bar Chart,Ca is top SHAP contributor for TDS (geogenic weathering),Geogenic (Ca weathering),Moderate-High
+6.9 SHAP Summary TDS,figures/task6_ml/fig_shap_summary_tds.png,SHAP Beeswarm,High Ca -> positive SHAP (increases TDS); monotonic positive relationships,Geogenic (Ca/Na),Moderate-High
+6.10 SHAP EC,figures/task6_ml/fig_shap_ec.png,SHAP Bar Chart,Na is top SHAP contributor for EC (highest ionic mobility),Mixed (Na geogenic+anthropogenic),Moderate-High
+6.11 SHAP Summary EC,figures/task6_ml/fig_shap_summary_ec.png,SHAP Beeswarm,Na: strong positive monotonic SHAP; DO: negative SHAP impact,Mixed,Moderate-High
+6.12 SHAP WQI,figures/task6_ml/fig_shap_wqi.png,SHAP Bar Chart,EC(top)/NO3/Iron drive WQI; mirrors WQI formula weights - model is interpretable,Mixed (EC) + Anthropogenic (NO3) + Geogenic (Iron),High
+6.13 SHAP Summary WQI,figures/task6_ml/fig_shap_summary_wqi.png,SHAP Beeswarm,High EC->high WQI(worse); high NO3->increase WQI; low pH->increase WQI,Mixed,High
+6.14 Combined Actual vs Predicted,figures/task6_ml/fig_actual_vs_predicted.png,Multi-panel Scatter,WQI (R2=0.936) > TDS (0.764) ≈ EC (0.757); all models Good-Excellent,N/A - ML Performance,High
+7.1 Seasonal Radar,figures/task7_insights/fig_seasonal_radar.png,Polar Radar (16 spokes),Monsoon polygon largest for EC/TDS/TH/Na/K; Postmonsoon largest for NO3/F; Pre=baseline,Monsoon=Geogenic+Anthropogenic; Post=Anthropogenic overprint,High
