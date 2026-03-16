@@ -61,3 +61,13 @@ Apply the above process to the following water quality dataset:
 13. Examine and explain the scaled values of the probability distribution on the Y-axis.
 
 14. Email the final WQI figures/plots, ensuring they are properly labeled, interpreted, and ready for review.
+
+
+Word file instructions:
+Objective
+intro
+data
+methodology - no ouptut value 
+results - diagrams and tables 
+discussions
+conclusion
