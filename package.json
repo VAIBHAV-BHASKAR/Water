@@ -1,0 +1,24 @@
+{
+  "name": "water",
+  "version": "1.0.0",
+  "description": "**Groundwater Quality Analysis — Bhubaneswar, Odisha, India (2024)**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VAIBHAV-BHASKAR/Water.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/VAIBHAV-BHASKAR/Water/issues"
+  },
+  "homepage": "https://github.com/VAIBHAV-BHASKAR/Water#readme",
+  "dependencies": {
+    "docx": "^9.6.1"
+  }
+}

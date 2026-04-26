@@ -1,0 +1,47 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Generate Report",
+			"type": "shell",
+			"command": ".venv/Scripts/python.exe make_report.py",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Install Deps",
+			"type": "shell",
+			"command": ".venv/Scripts/pip.exe install python-docx python-pptx Pillow",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Install Deps2",
+			"type": "shell",
+			"command": ".venv\\Scripts\\pip.exe install python-docx python-pptx Pillow",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Install Packages",
+			"type": "shell",
+			"command": "& 'C:\\Users\\KIIT0001\\Desktop\\Water\\.venv\\Scripts\\pip.exe' install python-docx python-pptx Pillow",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Pip Install",
+			"type": "shell",
+			"command": "& 'C:\\Users\\KIIT0001\\Desktop\\Water\\.venv\\Scripts\\python.exe' -m pip install python-docx python-pptx Pillow",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Run Report Generator",
+			"type": "shell",
+			"command": "& 'C:\\Users\\KIIT0001\\Desktop\\Water\\.venv\\Scripts\\python.exe' 'C:\\Users\\KIIT0001\\Desktop\\Water\\make_report.py'",
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}

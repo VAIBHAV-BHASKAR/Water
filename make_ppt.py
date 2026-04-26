@@ -1,895 +1,1054 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-make_ppt.py — Generate a professional academic PowerPoint presentation
-for the Hydrochemical Intelligence Report on Bhubaneswar Groundwater 2024.
+make_ppt.py — Enhanced Academic PowerPoint Presentation
+Hydrochemical Intelligence Report — Bhubaneswar Groundwater 2024
 
-All values are extracted from actual pipeline outputs (output.log, CSVs, figures).
-No placeholders — every number is real.
+All values sourced directly from output.log and pipeline CSVs.
+Design: Navy/Teal/Gold palette — KIIT academic format.
 
-Author:  Auto-generated for Lakshya Nayyar & Vaibhav Bhaskar
-Date:    2025
+Authors: Lakshya Nayyar (23053133) & Vaibhav Bhaskar (23053173)
 """
 
 from __future__ import annotations
-
-import os
 from pathlib import Path
-
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
 
-# ──────────────────────────────────────────────────────────────────────
-# CONSTANTS
-# ──────────────────────────────────────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
-FIG_DIR = BASE_DIR / "figures"
-OUT_PPT = BASE_DIR / "Hydrochemical_Analysis_Presentation.pptx"
+FIG_DIR  = BASE_DIR / "figures"
+OUT_PPT  = BASE_DIR / "Hydrochemical_Analysis_Presentation.pptx"
 
-# Colour palette
-CLR_TITLE_BG    = RGBColor(0x0D, 0x21, 0x37)   # dark navy
-CLR_CONTENT_BG  = RGBColor(0xF5, 0xF7, 0xFA)   # off-white
-CLR_ACCENT      = RGBColor(0x00, 0xB4, 0xD8)   # teal accent
-CLR_WHITE       = RGBColor(0xFF, 0xFF, 0xFF)
-CLR_DARK        = RGBColor(0x1A, 0x1A, 0x2E)
-CLR_GREY        = RGBColor(0x66, 0x66, 0x66)
-CLR_RED         = RGBColor(0xE0, 0x3E, 0x3E)
-CLR_GREEN       = RGBColor(0x2E, 0x8B, 0x57)
+# ─────────────────────────────────────────────────────────────────────
+# COLOUR PALETTE
+# ─────────────────────────────────────────────────────────────────────
+CLR_NAVY      = RGBColor(0x0D, 0x21, 0x37)   # primary dark navy
+CLR_NAVY2     = RGBColor(0x16, 0x37, 0x5A)   # mid navy (panels)
+CLR_TEAL      = RGBColor(0x00, 0xB4, 0xD8)   # teal accent
+CLR_TEAL_DK   = RGBColor(0x00, 0x87, 0xA6)   # dark teal
+CLR_TEAL_LT   = RGBColor(0xD0, 0xF4, 0xFF)   # light teal panel bg
+CLR_GOLD      = RGBColor(0xF4, 0xA2, 0x61)   # warm gold highlight
+CLR_WHITE     = RGBColor(0xFF, 0xFF, 0xFF)
+CLR_OFF_WHITE = RGBColor(0xF4, 0xF7, 0xFC)   # slide background
+CLR_DARK      = RGBColor(0x1A, 0x1A, 0x2E)   # near-black body text
+CLR_GREY      = RGBColor(0x55, 0x65, 0x75)   # secondary text
+CLR_RED       = RGBColor(0xD6, 0x3E, 0x3E)   # danger / non-compliant
+CLR_RED_LT    = RGBColor(0xFF, 0xEB, 0xEB)   # light red panel
+CLR_GREEN     = RGBColor(0x2A, 0x9D, 0x63)   # safe / good
+CLR_GREEN_LT  = RGBColor(0xE8, 0xF8, 0xEE)   # light green panel
+CLR_ORANGE    = RGBColor(0xF7, 0x8C, 0x28)   # caution
+CLR_PANEL     = RGBColor(0xE8, 0xF2, 0xFC)   # light blue panel bg
+CLR_DIVIDER   = RGBColor(0xD0, 0xD8, 0xE8)   # thin divider lines
 
-FONT_NAME = "Calibri"
-
+FONT  = "Calibri"
 SLIDE_W = Inches(13.333)
 SLIDE_H = Inches(7.5)
+TITLE_H = Inches(1.2)   # title bar height
+CONTENT_TOP = Inches(1.35)
 
-# ──────────────────────────────────────────────────────────────────────
-# HELPER FUNCTIONS
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
+# CORE HELPERS
+# ─────────────────────────────────────────────────────────────────────
 
 def safe_pic(slide, img_path, left, top, width=None, height=None):
-    """Add a picture to slide only if the file exists; skip silently otherwise."""
     p = Path(img_path)
     if not p.exists():
-        print(f"  [WARN] Missing figure: {p}")
+        print(f"  [WARN] Missing figure: {p.name}")
         return None
-    kwargs = {"image_file": str(p), "left": left, "top": top}
-    if width:
-        kwargs["width"] = width
-    if height:
-        kwargs["height"] = height
-    return slide.shapes.add_picture(**kwargs)
+    kw = {"image_file": str(p), "left": left, "top": top}
+    if width:  kw["width"]  = width
+    if height: kw["height"] = height
+    return slide.shapes.add_picture(**kw)
 
 
-def add_teal_rule(slide, left, top, width=Inches(10)):
-    """Draw a thin teal horizontal rule."""
-    shape = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, left, top, width, Pt(3)
-    )
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = CLR_ACCENT
-    shape.line.fill.background()
-    return shape
-
-
-def add_footer(slide, text="Nayyar & Bhaskar | KIIT University | 2025"):
-    """Place a subtle footer at the bottom-right."""
-    txBox = slide.shapes.add_textbox(
-        Inches(7.5), Inches(7.0), Inches(5.5), Inches(0.35)
-    )
-    tf = txBox.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = text
-    p.font.size = Pt(9)
-    p.font.color.rgb = CLR_GREY
-    p.font.name = FONT_NAME
-    p.alignment = PP_ALIGN.RIGHT
-
-
-def set_slide_bg(slide, color: RGBColor):
-    """Set solid background colour for a slide."""
+def set_bg(slide, color: RGBColor):
     bg = slide.background
-    fill = bg.fill
-    fill.solid()
-    fill.fore_color.rgb = color
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = color
 
 
-def add_textbox(slide, left, top, width, height, text,
-                font_size=14, bold=False, color=CLR_DARK, alignment=PP_ALIGN.LEFT,
-                font_name=FONT_NAME, line_spacing=1.15):
-    """Add a text box with sane defaults."""
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
-    tf.word_wrap = True
+def add_rect(slide, left, top, width, height, fill_color, line_color=None,
+             rounding=False):
+    shape_type = MSO_SHAPE.ROUNDED_RECTANGLE if rounding else MSO_SHAPE.RECTANGLE
+    s = slide.shapes.add_shape(shape_type, left, top, width, height)
+    s.fill.solid()
+    s.fill.fore_color.rgb = fill_color
+    if line_color:
+        s.line.color.rgb = line_color
+        s.line.width = Pt(1)
+    else:
+        s.line.fill.background()
+    return s
+
+
+def add_text(slide, left, top, width, height, text,
+             size=14, bold=False, color=CLR_DARK,
+             align=PP_ALIGN.LEFT, italic=False, wrap=True):
+    tb = slide.shapes.add_textbox(left, top, width, height)
+    tf = tb.text_frame
+    tf.word_wrap = wrap
     p = tf.paragraphs[0]
     p.text = text
-    p.font.size = Pt(font_size)
+    p.font.size = Pt(size)
     p.font.bold = bold
+    p.font.italic = italic
     p.font.color.rgb = color
-    p.font.name = font_name
-    p.alignment = alignment
-    p.space_after = Pt(4)
-    return txBox
+    p.font.name = FONT
+    p.alignment = align
+    return tb
 
 
-def add_bullet_list(slide, left, top, width, height, items,
-                    font_size=13, color=CLR_DARK, bullet_char="\u2022"):
-    """Add a bulleted list text box."""
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
+def add_bullets(slide, left, top, width, height, items,
+                size=14, color=CLR_DARK, bold_first_word=False,
+                spacing_after=5, bullet="▶"):
+    """Bullet list — minimum 14pt for readability."""
+    tb = slide.shapes.add_textbox(left, top, width, height)
+    tf = tb.text_frame
     tf.word_wrap = True
     for i, item in enumerate(items):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
-        p.text = f"{bullet_char} {item}"
-        p.font.size = Pt(font_size)
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.text = f"{bullet}  {item}"
+        p.font.size = Pt(size)
         p.font.color.rgb = color
-        p.font.name = FONT_NAME
-        p.space_after = Pt(3)
-    return txBox
+        p.font.name = FONT
+        p.space_after = Pt(spacing_after)
+        p.space_before = Pt(2)
+    return tb
 
 
-def add_title_bar(slide, title_text, subtitle_text=None):
-    """Add a dark navy bar with title at top of content slide."""
-    # Background bar
-    bar = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), SLIDE_W, Inches(1.15)
-    )
-    bar.fill.solid()
-    bar.fill.fore_color.rgb = CLR_TITLE_BG
-    bar.line.fill.background()
-
-    # Title text
-    add_textbox(slide, Inches(0.6), Inches(0.15), Inches(12), Inches(0.6),
-                title_text, font_size=28, bold=True, color=CLR_WHITE)
-
-    if subtitle_text:
-        add_textbox(slide, Inches(0.6), Inches(0.7), Inches(12), Inches(0.35),
-                    subtitle_text, font_size=14, color=CLR_ACCENT)
-
-    # Teal accent line below title bar
-    add_teal_rule(slide, Inches(0.6), Inches(1.12), Inches(12))
+def add_caption(slide, left, top, width, text):
+    """10pt italic grey caption below a figure."""
+    tb = slide.shapes.add_textbox(left, top, width, Inches(0.3))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = f"▲  {text}"
+    p.font.size = Pt(10)
+    p.font.italic = True
+    p.font.color.rgb = CLR_GREY
+    p.font.name = FONT
+    p.alignment = PP_ALIGN.CENTER
+    return tb
 
 
-# ──────────────────────────────────────────────────────────────────────
+def add_footer(slide, text="Nayyar & Bhaskar  |  KIIT University  |  2025"):
+    # Footer strip
+    add_rect(slide, Inches(0), Inches(7.15), SLIDE_W, Inches(0.35), CLR_NAVY)
+    # Left: authors
+    add_text(slide, Inches(0.4), Inches(7.18), Inches(7), Inches(0.28),
+             "Groundwater Quality Analysis — Bhubaneswar 2024",
+             size=9, color=CLR_TEAL, align=PP_ALIGN.LEFT)
+    # Right: attribution
+    add_text(slide, Inches(6.5), Inches(7.18), Inches(6.5), Inches(0.28),
+             text, size=9, color=CLR_GREY, align=PP_ALIGN.RIGHT)
+
+
+def rule(slide, left, top, width=Inches(12.5), color=CLR_TEAL, thickness=Pt(2)):
+    s = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, thickness)
+    s.fill.solid()
+    s.fill.fore_color.rgb = color
+    s.line.fill.background()
+    return s
+
+
+def add_title_bar(slide, title, subtitle=None, icon=None):
+    """Navy gradient title bar."""
+    # Main navy bar
+    add_rect(slide, Inches(0), Inches(0), SLIDE_W, TITLE_H, CLR_NAVY)
+    # Teal left accent stripe
+    add_rect(slide, Inches(0), Inches(0), Inches(0.22), TITLE_H, CLR_TEAL)
+    # Gold right accent corner
+    add_rect(slide, SLIDE_W - Inches(0.22), Inches(0), Inches(0.22), TITLE_H, CLR_GOLD)
+    # Title
+    add_text(slide, Inches(0.45), Inches(0.10), Inches(11.5), Inches(0.65),
+             title, size=26, bold=True, color=CLR_WHITE)
+    # Subtitle
+    if subtitle:
+        add_text(slide, Inches(0.45), Inches(0.72), Inches(11.5), Inches(0.38),
+                 subtitle, size=13, color=CLR_TEAL, italic=True)
+    # Bottom rule
+    rule(slide, Inches(0), TITLE_H - Pt(3), SLIDE_W, CLR_TEAL, Pt(3))
+
+
+def stat_box(slide, left, top, width, height, number, label,
+             bg=CLR_RED, txt=CLR_WHITE):
+    """Coloured callout box: big number + small label."""
+    add_rect(slide, left, top, width, height, bg, rounding=True)
+    num_h = height * 0.55
+    lbl_h = height * 0.40
+    add_text(slide, left, top + Pt(4), width, num_h,
+             number, size=28, bold=True, color=txt, align=PP_ALIGN.CENTER)
+    add_text(slide, left, top + num_h, width, lbl_h,
+             label, size=11, bold=True, color=txt, align=PP_ALIGN.CENTER)
+
+
+def panel_box(slide, left, top, width, height, title, color=CLR_TEAL):
+    """Titled content panel."""
+    add_rect(slide, left, top, width, Inches(0.38), color)
+    add_text(slide, left + Inches(0.12), top + Inches(0.05),
+             width - Inches(0.12), Inches(0.28),
+             title, size=13, bold=True, color=CLR_WHITE)
+    add_rect(slide, left, top + Inches(0.38), width,
+             height - Inches(0.38), CLR_PANEL, CLR_DIVIDER)
+
+
+def interp_box(slide, left, top, width, height, text, bg=CLR_TEAL_LT):
+    """Highlighted interpretation box — light teal bg, italic dark text."""
+    add_rect(slide, left, top, width, height, bg, CLR_TEAL)
+    add_text(slide, left + Inches(0.12), top + Inches(0.08),
+             width - Inches(0.24), height - Inches(0.1),
+             text, size=12, italic=True, color=CLR_NAVY2,
+             align=PP_ALIGN.LEFT)
+
+
+# ─────────────────────────────────────────────────────────────────────
 # SLIDE BUILDERS
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
 
 def slide_01_title(prs):
-    """SLIDE 1: Title Slide"""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank layout
-    set_slide_bg(slide, CLR_TITLE_BG)
+    """SLIDE 1 — Title"""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    set_bg(slide, CLR_NAVY)
+
+    # Decorative teal circle (large, bottom-right corner)
+    for r, a in [(Inches(5.5), RGBColor(0x00, 0x5F, 0x73)),
+                 (Inches(4.0), RGBColor(0x00, 0x78, 0x99)),
+                 (Inches(2.5), RGBColor(0x00, 0x96, 0xBE))]:
+        s = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL,
+            SLIDE_W - r + Inches(0.5), SLIDE_H - r + Inches(0.5), r, r)
+        s.fill.solid(); s.fill.fore_color.rgb = a; s.line.fill.background()
+
+    # Gold top accent stripe
+    add_rect(slide, Inches(0), Inches(0), SLIDE_W, Inches(0.12), CLR_GOLD)
+
+    # University tag — top left
+    add_text(slide, Inches(0.6), Inches(0.25), Inches(6), Inches(0.38),
+             "KIIT DEEMED TO BE UNIVERSITY  |  SCHOOL OF CIVIL ENGINEERING",
+             size=11, bold=True, color=CLR_TEAL, align=PP_ALIGN.LEFT)
+
+    # Academic year — top right
+    add_text(slide, Inches(7), Inches(0.25), Inches(6), Inches(0.38),
+             "Academic Year  2024 – 25",
+             size=11, color=CLR_GREY, align=PP_ALIGN.RIGHT)
+
+    # Horizontal rule
+    rule(slide, Inches(1.2), Inches(1.0), Inches(11), CLR_TEAL)
 
     # Main title
-    add_textbox(slide, Inches(1), Inches(1.2), Inches(11), Inches(1.2),
-                "Hydrochemical Intelligence Report",
-                font_size=40, bold=True, color=CLR_WHITE,
-                alignment=PP_ALIGN.CENTER)
+    add_text(slide, Inches(0.8), Inches(1.2), Inches(11.5), Inches(1.5),
+             "Hydrochemical Intelligence Report",
+             size=42, bold=True, color=CLR_WHITE, align=PP_ALIGN.CENTER)
 
     # Subtitle
-    add_textbox(slide, Inches(1), Inches(2.3), Inches(11), Inches(0.8),
-                "Multi-Seasonal Groundwater Quality Assessment\nBhubaneswar, Odisha — 2024",
-                font_size=22, color=CLR_ACCENT, alignment=PP_ALIGN.CENTER)
+    add_text(slide, Inches(1), Inches(2.65), Inches(11), Inches(0.75),
+             "Multi-Seasonal Groundwater Quality Assessment\nBhubaneswar, Odisha — 2024",
+             size=20, color=CLR_TEAL, align=PP_ALIGN.CENTER)
 
-    # Teal rule
-    add_teal_rule(slide, Inches(3.5), Inches(3.2), Inches(6))
+    # Divider
+    rule(slide, Inches(3.5), Inches(3.55), Inches(6.3), CLR_GOLD)
+
+    # Parameters strip
+    add_text(slide, Inches(0.8), Inches(3.75), Inches(11.5), Inches(0.45),
+             "16 Parameters  ·  15 Sampling Locations  ·  3 Seasons  ·  195 Samples  ·  5 ML Models",
+             size=13, color=CLR_GREY, align=PP_ALIGN.CENTER)
 
     # Authors
-    add_textbox(slide, Inches(1), Inches(3.6), Inches(11), Inches(0.7),
-                "Lakshya Nayyar (23053133)  |  Vaibhav Bhaskar (23053173)",
-                font_size=18, color=CLR_WHITE, alignment=PP_ALIGN.CENTER)
-
-    # Affiliation
-    add_textbox(slide, Inches(1), Inches(4.3), Inches(11), Inches(0.5),
-                "School of Civil Engineering, KIIT Deemed to be University, Bhubaneswar",
-                font_size=14, color=CLR_GREY, alignment=PP_ALIGN.CENTER)
+    add_text(slide, Inches(0.8), Inches(4.35), Inches(11.5), Inches(0.55),
+             "Lakshya Nayyar (23053133)     |     Vaibhav Bhaskar (23053173)",
+             size=19, bold=True, color=CLR_WHITE, align=PP_ALIGN.CENTER)
 
     # Guide
-    add_textbox(slide, Inches(1), Inches(5.0), Inches(11), Inches(0.5),
-                "Under the guidance of Dr. Ajit Kumar Pasayat",
-                font_size=15, color=CLR_WHITE, alignment=PP_ALIGN.CENTER)
+    add_text(slide, Inches(0.8), Inches(4.95), Inches(11.5), Inches(0.45),
+             "Under the guidance of  Dr. Ajit Kumar Pasayat",
+             size=14, color=CLR_GOLD, align=PP_ALIGN.CENTER)
 
-    # Date
-    add_textbox(slide, Inches(1), Inches(5.7), Inches(11), Inches(0.4),
-                "Academic Year 2024–25",
-                font_size=13, color=CLR_GREY, alignment=PP_ALIGN.CENTER)
+    # Affiliation
+    add_text(slide, Inches(0.8), Inches(5.5), Inches(11.5), Inches(0.4),
+             "School of Civil Engineering, KIIT Deemed to be University, Bhubaneswar",
+             size=12, color=CLR_GREY, align=PP_ALIGN.CENTER)
 
-    add_footer(slide, "KIIT University | 2025")
+    # Bottom rule
+    rule(slide, Inches(0), Inches(7.08), SLIDE_W, CLR_GOLD, Pt(4))
 
 
 def slide_02_outline(prs):
-    """SLIDE 2: Presentation Outline"""
+    """SLIDE 2 — Outline"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
-    add_title_bar(slide, "Presentation Outline")
+    set_bg(slide, CLR_OFF_WHITE)
+    add_title_bar(slide, "Presentation Outline",
+                  "End-to-End Hydrochemical Intelligence Pipeline — 7 Analytical Tasks")
 
-    outline_items = [
-        "1.  Introduction & Study Area",
-        "2.  Dataset Description & Synthetic Augmentation",
-        "3.  Methodology Pipeline",
-        "4.  Seasonal Hydrochemical Dynamics",
-        "5.  IS 10500:2012 Compliance & Water Quality Index",
-        "6.  Anthropogenic & Geogenic Source Analysis",
-        "7.  Parameter Grouping — PCA & Clustering",
-        "8.  ML-Based Forecasting (RF, GB, NN, SVR, XGBoost)",
-        "9.  SHAP Explainability & Residual Analysis",
-        "10. Conclusions & Policy Recommendations",
+    items_left = [
+        ("01", "Introduction & Study Area",     "15 sites · 3 zones · Bhubaneswar"),
+        ("02", "Dataset & Augmentation",        "45 original → 195 samples via CMGP"),
+        ("03", "Methodology Pipeline",          "7-task scalable analysis framework"),
+        ("04", "Seasonal Dynamics",             "ANOVA/KW tests · % change across seasons"),
+        ("05", "IS 10500 Compliance & WQI",     "3-tier BIS assessment · weighted WQI"),
+    ]
+    items_right = [
+        ("06", "Source Analysis",               "Piper · Gibbs · Ionic ratios"),
+        ("07", "PCA & Clustering",              "6 PCs (73%) · K-Means k=3"),
+        ("08", "ML Forecasting",                "RF · GB · NN · SVR · XGBoost"),
+        ("09", "SHAP Explainability",           "Feature importance · GA · NSE · RSR"),
+        ("10", "Conclusions & Recommendations", "Policy · Health · Future work"),
     ]
 
-    txBox = slide.shapes.add_textbox(Inches(1.2), Inches(1.6), Inches(10), Inches(5.5))
-    tf = txBox.text_frame
-    tf.word_wrap = True
-    for i, item in enumerate(outline_items):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
-        p.text = item
-        p.font.size = Pt(18)
-        p.font.color.rgb = CLR_DARK
-        p.font.name = FONT_NAME
-        p.space_after = Pt(10)
-        p.space_before = Pt(4)
+    def draw_items(items, x_start):
+        y = CONTENT_TOP
+        for num, title, desc in items:
+            # Number badge
+            s = add_rect(slide, x_start, y, Inches(0.55), Inches(0.72), CLR_TEAL, rounding=True)
+            add_text(slide, x_start, y + Inches(0.12), Inches(0.55), Inches(0.45),
+                     num, size=18, bold=True, color=CLR_WHITE, align=PP_ALIGN.CENTER)
+            # Title
+            add_text(slide, x_start + Inches(0.68), y, Inches(5.3), Inches(0.38),
+                     title, size=16, bold=True, color=CLR_NAVY)
+            # Description
+            add_text(slide, x_start + Inches(0.68), y + Inches(0.36),
+                     Inches(5.3), Inches(0.3),
+                     desc, size=11, color=CLR_GREY, italic=True)
+            y += Inches(1.08)
 
+    draw_items(items_left,  Inches(0.45))
+    draw_items(items_right, Inches(6.9))
+
+    # Vertical divider
+    add_rect(slide, Inches(6.65), CONTENT_TOP, Inches(0.04), Inches(5.4), CLR_DIVIDER)
     add_footer(slide)
 
 
 def slide_03_introduction(prs):
-    """SLIDE 3: Introduction & Study Area"""
+    """SLIDE 3 — Introduction & Study Area"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "Introduction & Study Area",
-                  "Bhubaneswar, Odisha — 15 Groundwater Monitoring Locations")
+                  "Bhubaneswar, Odisha — 15 Groundwater Sampling Locations (2024)")
 
-    # Motivation text
-    add_textbox(slide, Inches(0.6), Inches(1.4), Inches(6.5), Inches(1.0),
-                "Bhubaneswar relies heavily on groundwater for drinking and domestic use. "
-                "Rapid urbanisation, industrial activity, and waste dumping degrade aquifer quality. "
-                "This study investigates hydrochemical signatures across 15 sampling sites "
-                "spanning 3 land-use categories over 3 seasons of 2024.",
-                font_size=13, color=CLR_DARK)
+    # Context paragraph
+    interp_box(slide, Inches(0.42), CONTENT_TOP, Inches(12.5), Inches(0.72),
+               "Rapid urbanisation, industrial expansion, and unregulated waste disposal in "
+               "Bhubaneswar have placed increasing pressure on urban groundwater aquifers. "
+               "This study systematically characterises hydrochemical signatures across 3 "
+               "land-use zones and 3 seasons, providing a scientific basis for risk management.")
 
-    # Site table header
-    add_textbox(slide, Inches(0.6), Inches(2.5), Inches(4), Inches(0.35),
-                "Population Density Areas (PD)", font_size=14, bold=True, color=CLR_ACCENT)
-    pd_sites = [
-        "PD-1: Acharya Vihar",
-        "PD-2: Ram Mandir",
-        "PD-3: Sailashree Vihar",
-        "PD-4: OMFED Square",
-        "PD-5: Old Town",
+    # Three zone panels
+    zones = [
+        ("PD — Population Density Areas", CLR_TEAL, CLR_TEAL_LT,
+         ["PD-1: Acharya Vihar", "PD-2: Ram Mandir", "PD-3: Sailashree Vihar",
+          "PD-4: OMFED Square", "PD-5: Old Town"]),
+        ("IA — Industrial Areas", CLR_NAVY2, CLR_PANEL,
+         ["IA-1: Mancheswar Industrial Estate", "IA-2: Chandaka Industrial Area",
+          "IA-3: OMFED Industries", "IA-4: Rasulgarh", "IA-5: Anmol Industries"]),
+        ("DY — Dumping Yards", CLR_ORANGE, RGBColor(0xFF, 0xF3, 0xE3),
+         ["DY-1: Bhuasuni Temple Area", "DY-2: Lingaraj Railway Station",
+          "DY-3: BMC Micro Compost", "DY-4: Gadakan Road", "DY-5: Daruthenga"]),
     ]
-    add_bullet_list(slide, Inches(0.8), Inches(2.85), Inches(3.8), Inches(1.5),
-                    pd_sites, font_size=11)
 
-    add_textbox(slide, Inches(4.8), Inches(2.5), Inches(4), Inches(0.35),
-                "Industrial Areas (IA)", font_size=14, bold=True, color=CLR_ACCENT)
-    ia_sites = [
-        "IA-1: Mancheswar Industrial Estate",
-        "IA-2: Chandaka Industrial Area",
-        "IA-3: OMFED Industries",
-        "IA-4: Rasulgarh",
-        "IA-5: Anmol Industries",
+    xp = Inches(0.42)
+    for title, hdr_clr, bg_clr, sites in zones:
+        panel_box(slide, xp, Inches(2.25), Inches(4.1), Inches(3.0), title, hdr_clr)
+        add_rect(slide, xp, Inches(2.25) + Inches(0.38),
+                 Inches(4.1), Inches(2.62), bg_clr, CLR_DIVIDER)
+        sy = Inches(2.25) + Inches(0.48)
+        for site in sites:
+            add_text(slide, xp + Inches(0.2), sy, Inches(3.8), Inches(0.38),
+                     f"◦  {site}", size=13, color=CLR_DARK)
+            sy += Inches(0.48)
+        xp += Inches(4.3)
+
+    # Key stats strip
+    add_rect(slide, Inches(0.42), Inches(5.45), Inches(12.5), Inches(0.52), CLR_NAVY)
+    stats = [
+        "📍 15 Locations", "🗓 3 Seasons (Pre/Mon/Post monsoon)", "🔬 16 Parameters",
+        "🗃 45 Original + 150 Synthetic = 195 Samples", "⚗ IS 10500:2012 Standard"
     ]
-    add_bullet_list(slide, Inches(5.0), Inches(2.85), Inches(3.8), Inches(1.5),
-                    ia_sites, font_size=11)
+    add_text(slide, Inches(0.55), Inches(5.50), Inches(12.3), Inches(0.44),
+             "    |    ".join(stats), size=12, bold=True, color=CLR_TEAL,
+             align=PP_ALIGN.CENTER)
 
-    add_textbox(slide, Inches(9.0), Inches(2.5), Inches(4), Inches(0.35),
-                "Dumping Yards (DY)", font_size=14, bold=True, color=CLR_ACCENT)
-    dy_sites = [
-        "DY-1: Bhuasuni Temple Area",
-        "DY-2: Lingaraj Railway Station",
-        "DY-3: BMC Micro Compost",
-        "DY-4: Gadakan Road",
-        "DY-5: Daruthenga",
-    ]
-    add_bullet_list(slide, Inches(9.2), Inches(2.85), Inches(3.8), Inches(1.5),
-                    dy_sites, font_size=11)
-
-    # Key numbers
-    add_textbox(slide, Inches(0.6), Inches(4.6), Inches(12), Inches(0.4),
-                "16 hydrochemical parameters  |  3 seasons (Premonsoon, Monsoon, Postmonsoon)  |  45 original samples",
-                font_size=13, bold=True, color=CLR_DARK, alignment=PP_ALIGN.CENTER)
-
-    # Parameters list
-    add_textbox(slide, Inches(0.6), Inches(5.1), Inches(12), Inches(0.7),
-                "Parameters: pH, EC, TDS, TH, Alkalinity, Ca, Mg, Na, K, Iron, "
-                "HCO\u2083, Cl, SO\u2084, NO\u2083, F, DO",
-                font_size=12, color=CLR_GREY, alignment=PP_ALIGN.CENTER)
-
-    # Image — original vs synthetic publication figure if exists
-    safe_pic(slide, FIG_DIR / "task1_cleaning" / "fig_original_vs_synthetic.png",
-             Inches(0.6), Inches(5.6), width=Inches(5), height=Inches(1.6))
+    # Parameters row
+    add_text(slide, Inches(0.42), Inches(6.08), Inches(12.5), Inches(0.45),
+             "Parameters:  pH · EC · TDS · TH · Alkalinity · Ca · Mg · Na · K · Iron · HCO₃ · Cl · SO₄ · NO₃ · F · DO",
+             size=13, color=CLR_GREY, align=PP_ALIGN.CENTER)
 
     add_footer(slide)
 
 
 def slide_04_dataset(prs):
-    """SLIDE 4: Dataset Description & Synthetic Augmentation"""
+    """SLIDE 4 — Dataset & Synthetic Augmentation"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "Dataset Description & Synthetic Augmentation",
-                  "From 45 Original Samples to 195 Combined Samples")
+                  "CMGP Framework — From 45 Original to 195 Analysis-Ready Samples")
 
-    # Left column — Original data
-    add_textbox(slide, Inches(0.6), Inches(1.5), Inches(5.8), Inches(0.4),
-                "Original Dataset", font_size=18, bold=True, color=CLR_ACCENT)
-    orig_items = [
-        "Source: water quality data_Three Seasons_2024.xlsx",
-        "3 Excel sheets: Premonsoon, Monsoon, Postmonsoon 2024",
-        "15 locations × 3 seasons = 45 samples × 16 parameters",
-        "Cleaning: removed duplicate headers, computed columns, NaN rows",
-        "Charge Balance Error: 93.3% valid (42/45 within ±10%)",
-        "Mean CBE = 0.76%, Median = 2.54%, Range = [−10.36%, 10.74%]",
-        "No missing values in chemical parameters",
+    # Left panel — original
+    panel_box(slide, Inches(0.42), CONTENT_TOP, Inches(5.8), Inches(2.65),
+              "Original Dataset  (n = 45)", CLR_NAVY2)
+    add_bullets(slide, Inches(0.6), CONTENT_TOP + Inches(0.5), Inches(5.5), Inches(2.1),
+                ["Source: water quality data_Three Seasons_2024.xlsx",
+                 "3 sheets: Premonsoon · Monsoon · Postmonsoon 2024",
+                 "15 locations × 3 seasons = 45 samples × 16 parameters",
+                 "CBE validity: 93.3%  (mean CBE = 0.76%, range ±10.7%)",
+                 "Zero missing values in all chemical parameters",
+                 "Cleaned: duplicate headers removed, types enforced"],
+                size=13, color=CLR_DARK)
+
+    # Right panel — synthetic
+    panel_box(slide, Inches(6.55), CONTENT_TOP, Inches(6.38), Inches(2.65),
+              "CMGP Synthetic Augmentation  (n = 150)", CLR_TEAL_DK)
+    add_bullets(slide, Inches(6.73), CONTENT_TOP + Inches(0.5), Inches(6.1), Inches(2.1),
+                ["Controlled Multivariate Gaussian Perturbation (CMGP)",
+                 "Layer 1: Covariance inflation +40%  (wider spread)",
+                 "Layer 2: Mean jitter ±6%  (inter-annual variability)",
+                 "Layer 3: Multivariate sampling  (preserves correlations)",
+                 "Layer 4: Independent Gaussian noise +8%  (measurement error)",
+                 "Layer 5: Outlier injection 5% × 2.5σ  (realistic extremes)"],
+                size=13, color=CLR_DARK)
+
+    # Stat row
+    stats = [
+        ("45",    "Original\nSamples",  CLR_NAVY2),
+        ("150",   "Synthetic\nSamples", CLR_TEAL_DK),
+        ("195",   "Combined\nDataset",  CLR_GREEN),
+        ("12.2:1","Sample:\nVariable",  CLR_GOLD),
     ]
-    add_bullet_list(slide, Inches(0.8), Inches(1.95), Inches(5.6), Inches(2.5),
-                    orig_items, font_size=12)
+    xb = Inches(0.6)
+    for num, lbl, clr in stats:
+        stat_box(slide, xb, Inches(4.25), Inches(2.85), Inches(0.92),
+                 num, lbl, bg=clr)
+        xb += Inches(3.15)
 
-    # Right column — Synthetic data
-    add_textbox(slide, Inches(7.0), Inches(1.5), Inches(5.8), Inches(0.4),
-                "Synthetic Augmentation", font_size=18, bold=True, color=CLR_ACCENT)
-    syn_items = [
-        "Method: Multivariate Gaussian sampling per season + noise injection",
-        "Covariance inflation (40%), mean jitter (\u00b16%), independent Gaussian noise (8%)",
-        "Outlier perturbation: 5% of samples at 2.5\u00d7 std for realistic spread",
-        "Physical bounds clipping enforces realistic ranges",
-        "150 synthetic samples (50 per season); Combined: 195 samples",
-        "CBE on combined: 64.6% valid (noise introduces realistic ionic imbalance)",
-        "Purpose: improve ML robustness & reduce overfitting of original patterns",
-    ]
-    add_bullet_list(slide, Inches(7.2), Inches(1.95), Inches(5.6), Inches(2.5),
-                    syn_items, font_size=12)
-
-    # Figure — publication-quality side-by-side
+    # Figure — original vs synthetic
     safe_pic(slide, BASE_DIR / "fig_original_vs_synthetic_publication.png",
-             Inches(1.5), Inches(4.5), width=Inches(10), height=Inches(2.7))
+             Inches(0.42), Inches(5.3), width=Inches(8.5), height=Inches(1.9))
+
+    # Defense figure
+    safe_pic(slide, FIG_DIR / "task2_validation" / "fig_defense_summary.png",
+             Inches(9.1), Inches(5.3), width=Inches(3.85), height=Inches(1.9))
+    add_caption(slide, Inches(0.42), Inches(7.06), Inches(8.5),
+                "Fig. Original (blue) vs. Synthetic (orange) parameter distributions — CMGP preserves statistical fidelity")
 
     add_footer(slide)
 
 
 def slide_05_methodology(prs):
-    """SLIDE 5: Methodology Pipeline"""
+    """SLIDE 5 — Methodology Pipeline"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "Methodology Pipeline",
-                  "7-Task Scalable Analysis Framework")
+                  "7-Task Scalable Analysis Framework — Python · IS 10500:2012 · WHO 2011")
 
-    pipeline_steps = [
-        ("Task 1", "Data Reconstruction & Cleaning",
-         "Load 3 seasonal Excel sheets, clean headers, align columns, export CSV"),
-        ("Task 2", "Data Validation",
-         "Missing-value analysis, IQR + Z-score outlier detection, ionic balance (CBE ±10%)"),
-        ("Task 3", "EDA & Seasonal Dynamics",
-         "Descriptive statistics, box/violin plots, ANOVA/KW tests, seasonal % change"),
-        ("Task 4", "Drinking Water Risk Intelligence",
-         "IS 10500:2012 3-tier compliance, exceedance factors, WQI (Brown et al., 1970)"),
-        ("Task 5", "Source Analysis",
-         "PCA, K-Means clustering, Piper diagram, Gibbs diagram, ionic ratios"),
-        ("Task 6", "ML Forecasting",
-         "5 models (RF, GB, NN, SVR, XGBoost), SHAP, residuals, GA/NSE/RSR/MAPE"),
-        ("Task 7", "Scientific Insights",
-         "Salinity drivers, seasonal ranking, spatial clustering, risk assessment"),
+    steps = [
+        ("T1", "Data Reconstruction & Cleaning",
+         "Fuzzy header mapping · Duplicate/NaN removal · Type coercion · CSV export",
+         CLR_NAVY2),
+        ("T2", "Data Validation",
+         "Missing-value heatmap · IQR + Z-score outlier flags · Charge Balance Error (±10%)",
+         CLR_TEAL_DK),
+        ("T3", "EDA & Seasonal Dynamics",
+         "Descriptive stats · ANOVA / Kruskal-Wallis tests · Seasonal % change · Correlation",
+         RGBColor(0x20, 0x7E, 0xA7)),
+        ("T4", "IS 10500:2012 Compliance & WQI",
+         "3-tier BIS classification · Exceedance factors · WQI (Brown et al., 1970)",
+         RGBColor(0x1D, 0x7A, 0x56)),
+        ("T5", "Source Analysis",
+         "PCA · K-Means (k=3) · Piper diagram · Gibbs mechanism · Ionic ratios",
+         RGBColor(0x7B, 0x4F, 0xB2)),
+        ("T6", "ML-Based Forecasting",
+         "RF · GB · NN · SVR · XGBoost  ·  SHAP explainability  ·  GA / NSE / RSR / MAPE",
+         RGBColor(0xBF, 0x5F, 0x00)),
+        ("T7", "Scientific Insights",
+         "Salinity drivers · Seasonal exceedance ranking · Location risk atlas · Recommendations",
+         CLR_RED),
     ]
 
-    y = Inches(1.5)
-    for step_id, step_title, step_desc in pipeline_steps:
-        # Step ID box
-        box = slide.shapes.add_shape(
-            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.6), y, Inches(1.0), Inches(0.6)
-        )
-        box.fill.solid()
-        box.fill.fore_color.rgb = CLR_ACCENT
-        box.line.fill.background()
-        tf = box.text_frame
-        tf.word_wrap = True
-        tf.paragraphs[0].text = step_id
-        tf.paragraphs[0].font.size = Pt(12)
-        tf.paragraphs[0].font.bold = True
-        tf.paragraphs[0].font.color.rgb = CLR_WHITE
-        tf.paragraphs[0].font.name = FONT_NAME
-        tf.paragraphs[0].alignment = PP_ALIGN.CENTER
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    y = CONTENT_TOP
+    row_h = Inches(0.75)
 
-        # Title
-        add_textbox(slide, Inches(1.8), y, Inches(3.5), Inches(0.35),
-                    step_title, font_size=14, bold=True, color=CLR_DARK)
-        # Description
-        add_textbox(slide, Inches(5.5), y + Inches(0.05), Inches(7.2), Inches(0.5),
-                    step_desc, font_size=11, color=CLR_GREY)
+    for tag, title, desc, clr in steps:
+        # Tag badge
+        add_rect(slide, Inches(0.42), y, Inches(0.7), row_h, clr, rounding=True)
+        add_text(slide, Inches(0.42), y + Inches(0.2), Inches(0.7), Inches(0.4),
+                 tag, size=14, bold=True, color=CLR_WHITE, align=PP_ALIGN.CENTER)
+        # Title box
+        add_rect(slide, Inches(1.25), y, Inches(4.2), row_h, CLR_PANEL, CLR_DIVIDER)
+        add_text(slide, Inches(1.38), y + Inches(0.15), Inches(4.0), Inches(0.48),
+                 title, size=15, bold=True, color=clr)
+        # Description box
+        add_rect(slide, Inches(5.6), y, Inches(7.4), row_h, CLR_OFF_WHITE, CLR_DIVIDER)
+        add_text(slide, Inches(5.75), y + Inches(0.17), Inches(7.2), Inches(0.42),
+                 desc, size=13, color=CLR_DARK)
+        # Arrow connector
+        add_rect(slide, Inches(0.73), y + row_h, Inches(0.08),
+                 Inches(0.04), clr)
+        y += row_h + Inches(0.04)
 
-        y += Inches(0.75)
-
-    # Frameworks box
-    add_textbox(slide, Inches(0.6), y + Inches(0.3), Inches(12), Inches(0.5),
-                "Standards:  IS 10500:2012 (BIS)  |  WHO Guidelines (4th Ed., 2011)  |  "
-                "GoI FSSAI / CPCB Class A Criteria",
-                font_size=12, bold=True, color=CLR_DARK, alignment=PP_ALIGN.CENTER)
+    # Standards bar
+    add_rect(slide, Inches(0.42), y + Inches(0.08), Inches(12.5), Inches(0.42), CLR_NAVY)
+    add_text(slide, Inches(0.6), y + Inches(0.10), Inches(12.3), Inches(0.35),
+             "Standards & References:  IS 10500:2012 (BIS)  ·  WHO Guidelines 4th Ed. (2011)  "
+             "·  Brown et al. (1970) WQI  ·  Hair et al. (2010) PCA  ·  Lundberg & Lee (2017) SHAP",
+             size=11, bold=True, color=CLR_TEAL, align=PP_ALIGN.CENTER)
 
     add_footer(slide)
 
 
 def slide_06a_seasonal(prs):
-    """SLIDE 6a: Seasonal Variation — Statistical Overview"""
+    """SLIDE 6a — Seasonal Dynamics: Statistics"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
-    add_title_bar(slide, "Seasonal Hydrochemical Dynamics — Statistics",
-                  "ANOVA/Kruskal-Wallis Tests & Seasonal Trends")
+    set_bg(slide, CLR_OFF_WHITE)
+    add_title_bar(slide, "Seasonal Hydrochemical Dynamics — Statistical Analysis",
+                  "ANOVA / Kruskal-Wallis Tests · Premonsoon → Monsoon → Postmonsoon")
 
-    # Key findings
-    findings = [
-        "15 of 16 parameters show statistically significant seasonal variation (p < 0.05)",
-        "Only pH is non-significant — all others (including Mg, Iron, SO\u2084, NO\u2083) now significant",
-        "Monsoon EC mean = 609 \u00b5S/cm vs Premonsoon 407 \u00b5S/cm (+49.7%)",
-        "Total Hardness surges 530% from Premonsoon (23.4) to Monsoon (147.6 mg/L)",
-        "Alkalinity drops 47.9% from Premonsoon (112.8) to Postmonsoon (58.8 mg/L)",
-        "Na surges +80.3% Pre\u2192Mon; K surges +103.1% Pre\u2192Mon — anthropogenic mobilisation",
+    # Key finding callouts
+    callouts = [
+        ("EC +60%", "Premonsoon→Monsoon",  CLR_ORANGE),
+        ("TH +497%","Pre→Mon surge",        CLR_RED),
+        ("Na +101%","Premonsoon→Monsoon",   CLR_NAVY2),
+        ("K +122%", "Pre→Mon (fertiliser)", CLR_TEAL_DK),
     ]
-    add_bullet_list(slide, Inches(0.6), Inches(1.4), Inches(6), Inches(3.0),
-                    findings, font_size=12)
+    xb = Inches(0.42)
+    for num, lbl, clr in callouts:
+        stat_box(slide, xb, CONTENT_TOP, Inches(2.95), Inches(0.88), num, lbl, bg=clr)
+        xb += Inches(3.1)
 
-    # Figures
+    # Interpretation
+    interp_box(slide, Inches(0.42), Inches(2.44), Inches(5.5), Inches(0.9),
+               "Monsoon infiltration mobilises surface contaminants into the aquifer. "
+               "Na, K, and TH spike sharply due to enhanced rock-water interaction and "
+               "potential sewage/fertiliser inputs during the wet season.")
+
+    # Key findings bullets
+    add_bullets(slide, Inches(0.42), Inches(3.48), Inches(5.5), Inches(2.6),
+                ["All 16 parameters show significant seasonal variation (p < 0.05)",
+                 "Monsoon is universally the worst season (210 IS 10500 exceedances)",
+                 "EC: Pre=392 → Mon=627 → Post=446 µS/cm",
+                 "TDS: Pre=246 → Mon=411 → Post=293 mg/L",
+                 "Alkalinity drops −30% Mon→Post (carbonate buffering exhausted)",
+                 "DO decreases Premonsoon→Monsoon (−22%) — organic loading"],
+                size=14, color=CLR_DARK)
+
+    # Right: boxplot figure
     safe_pic(slide, FIG_DIR / "task3_seasonal" / "fig_seasonal_boxplots.png",
-             Inches(6.8), Inches(1.3), width=Inches(6), height=Inches(2.8))
+             Inches(6.15), CONTENT_TOP, width=Inches(7.0), height=Inches(3.2))
+    add_caption(slide, Inches(6.15), Inches(4.42), Inches(7.0),
+                "Fig. Box plots of all 16 parameters by season — Monsoon (orange) consistently highest for EC, TDS, Na, K")
 
+    # Bottom: heatmap + trends
     safe_pic(slide, FIG_DIR / "task3_seasonal" / "fig_seasonal_heatmap.png",
-             Inches(0.6), Inches(4.5), width=Inches(5.8), height=Inches(2.7))
+             Inches(0.42), Inches(4.72), width=Inches(6.0), height=Inches(2.3))
+    add_caption(slide, Inches(0.42), Inches(7.0), Inches(6.0),
+                "Fig. Seasonal mean concentration heatmap — red = high, blue = low")
 
     safe_pic(slide, FIG_DIR / "task3_seasonal" / "fig_seasonal_trends.png",
-             Inches(6.8), Inches(4.5), width=Inches(6), height=Inches(2.7))
+             Inches(6.65), Inches(4.72), width=Inches(6.5), height=Inches(2.3))
+    add_caption(slide, Inches(6.65), Inches(7.0), Inches(6.5),
+                "Fig. Seasonal trends (Pre → Mon → Post) with ±1 SD error bars")
 
     add_footer(slide)
 
 
 def slide_06b_seasonal(prs):
-    """SLIDE 6b: Seasonal Variation — Distributions & Correlations"""
+    """SLIDE 6b — Distributions, Correlations & Radar"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
-    add_title_bar(slide, "Seasonal Variation — Distributions & Correlations",
-                  "Violin Plots, Radar, and Correlation Structure")
+    set_bg(slide, CLR_OFF_WHITE)
+    add_title_bar(slide, "Seasonal Variation — Distributions & Correlation Structure",
+                  "Violin Plots · Correlation Matrix · Seasonal Radar")
 
-    # Interpretation text
-    interp = [
-        "Dilution Effect: Monsoon rainwater infiltration lowers TDS, EC concentrations in some zones",
-        "Concentration Effect: Premonsoon (dry) shows higher concentrations due to evapotranspiration",
-        "Mineral Dissolution: Enhanced recharge during monsoon promotes rock-water interaction",
-        "Post-Monsoon Recovery: Transitional phase — residual recharge effects gradually diminish",
-        "Multicollinearity: EC\u2194TDS (r=0.859) — only pair above |r|>0.7 after noise injection",
-    ]
-    add_bullet_list(slide, Inches(0.6), Inches(1.4), Inches(5.5), Inches(2.0),
-                    interp, font_size=11)
+    # Left interpretation
+    add_text(slide, Inches(0.42), CONTENT_TOP, Inches(5.2), Inches(0.32),
+             "Hydrochemical Interpretation", size=15, bold=True, color=CLR_TEAL)
+    add_bullets(slide, Inches(0.42), CONTENT_TOP + Inches(0.35), Inches(5.2), Inches(2.8),
+                ["EC ↔ TDS: r = 0.898 — strongest correlation (physical law)",
+                 "EC ↔ Na: r = 0.732 — sodium is the dominant conductivity driver",
+                 "No other pair exceeds |r| > 0.7 after noise injection",
+                 "Violin plots reveal monsoon distributions are right-skewed — "
+                   "few samples have very high concentrations",
+                 "Premonsoon violin shapes are narrower (less variability, dry season)",
+                 "Post-monsoon: transitional chemistry — partial recovery from monsoon peak",
+                 "Radar chart: Monsoon polygon area is largest — highest overall chemical load"],
+                size=13, color=CLR_DARK)
 
-    # Figures
+    # Violin plot
     safe_pic(slide, FIG_DIR / "task3_seasonal" / "fig_seasonal_violins.png",
-             Inches(6.5), Inches(1.3), width=Inches(6.3), height=Inches(2.8))
+             Inches(5.85), CONTENT_TOP, width=Inches(7.3), height=Inches(3.0))
+    add_caption(slide, Inches(5.85), Inches(4.3), Inches(7.3),
+                "Fig. Violin plots — shape width = probability density; wider = more samples at that concentration")
 
+    # Correlation matrix
     safe_pic(slide, FIG_DIR / "task3_seasonal" / "fig_correlation_matrix.png",
-             Inches(0.6), Inches(3.6), width=Inches(5.8), height=Inches(3.5))
+             Inches(0.42), Inches(3.65), width=Inches(6.0), height=Inches(3.3))
+    add_caption(slide, Inches(0.42), Inches(6.92), Inches(6.0),
+                "Fig. Pearson correlation matrix — EC↔TDS (r=0.898) is the strongest pair")
 
+    # Radar chart
     safe_pic(slide, FIG_DIR / "task7_insights" / "fig_seasonal_radar.png",
-             Inches(6.8), Inches(4.3), width=Inches(5.8), height=Inches(2.8))
+             Inches(6.65), Inches(4.38), width=Inches(6.5), height=Inches(2.6))
+    add_caption(slide, Inches(6.65), Inches(6.92), Inches(6.5),
+                "Fig. Seasonal radar — area enclosed = overall chemical load; Monsoon (orange) is largest")
 
     add_footer(slide)
 
 
 def slide_07_compliance_wqi(prs):
-    """SLIDE 7: IS 10500:2012 Compliance & Water Quality Index"""
+    """SLIDE 7 — IS 10500 Compliance & WQI"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "IS 10500:2012 Compliance & Water Quality Index",
-                  "3-Tier BIS Assessment + WQI (Brown et al., 1970)")
+                  "BIS 3-Tier Classification: Safe · Caution · Unsafe  |  WQI (Brown et al., 1970)")
 
-    # Left column — Safety summary
-    add_textbox(slide, Inches(0.6), Inches(1.4), Inches(5.5), Inches(0.35),
-                "Overall Sample Safety (n = 195)", font_size=15, bold=True, color=CLR_ACCENT)
-    safety_items = [
-        "UNSAFE: 183 samples (93.8%) — at least one parameter exceeds permissible limit",
-        "CAUTION: 3 samples (1.5%) — within permissible but exceeds acceptable limit",
-        "SAFE: 9 samples (4.6%) — all parameters within acceptable limits",
-        "Primary drivers: pH (76.4% unsafe), Iron (51.8%), NO\u2083 (23.6%), K (22.6%)",
-        "DO: 12.3% unsafe, 39.5% caution — organic contamination in monsoon",
-        "Worst season: Monsoon (221 exceedances across all parameters)",
-        "Worst locations: SYN-X12, SYN-X11 (5 exceedances each in single season)",
+    # Top stat callouts
+    callouts = [
+        ("75.4%", "pH Unsafe",     CLR_RED),
+        ("45.1%", "Iron Unsafe",   CLR_ORANGE),
+        ("28.2%", "K Unsafe",      CLR_NAVY2),
+        ("11.8%", "NO₃ Unsafe",    RGBColor(0x8B, 0x44, 0x13)),
+        ("100%",  "WQI: Good+",    CLR_GREEN),
     ]
-    add_bullet_list(slide, Inches(0.8), Inches(1.85), Inches(5.3), Inches(2.5),
-                    safety_items, font_size=11)
+    xb = Inches(0.42)
+    for num, lbl, clr in callouts:
+        stat_box(slide, xb, CONTENT_TOP, Inches(2.38), Inches(0.9), num, lbl, bg=clr)
+        xb += Inches(2.5)
 
-    # Right column — WQI summary
-    add_textbox(slide, Inches(6.5), Inches(1.4), Inches(6.3), Inches(0.35),
-                "Water Quality Index (WQI)", font_size=15, bold=True, color=CLR_ACCENT)
-    wqi_items = [
-        "Method: Weighted arithmetic (Brown et al., 1970) — 16 parameters",
-        "Mean WQI = 52.49   |   Range = [30.64, 77.02]",
-        "Excellent (WQI < 50): 82 samples (42.1%)",
-        "Good (50 \u2264 WQI < 100): 113 samples (57.9%)",
-        "No samples in Poor, Very Poor, or Unsuitable categories",
-        "Premonsoon WQI lower (better) than Monsoon / Postmonsoon",
-        "IS 10500 Reference: BIS (2012), Supplementary: WHO (2011, 4th Ed.)",
-    ]
-    add_bullet_list(slide, Inches(6.7), Inches(1.85), Inches(6.1), Inches(2.5),
-                    wqi_items, font_size=11)
+    # Compliance interpretation
+    interp_box(slide, Inches(0.42), Inches(2.55), Inches(6.0), Inches(0.95),
+               "pH non-compliance (75.4%) reflects natural geological acidity of "
+               "Odisha's alluvial aquifers — NOT primarily anthropogenic. "
+               "Iron (45.1%) is geogenic — laterite soils release Fe²⁺ under reducing conditions. "
+               "K (28.2%) excess indicates probable fertiliser (potash) contamination near agricultural zones.")
 
-    # Figures
+    # WQI summary
+    add_text(slide, Inches(6.65), Inches(2.55), Inches(6.23), Inches(0.32),
+             "Water Quality Index — All Samples Good or Better", size=14, bold=True, color=CLR_GREEN)
+    add_bullets(slide, Inches(6.65), Inches(2.9), Inches(6.23), Inches(0.98),
+                ["Excellent (WQI < 50): 77 samples (39.5%) — Premonsoon dominated",
+                 "Good (50–100):         118 samples (60.5%) — Monsoon dominated",
+                 "Poor / Very Poor / Unsuitable: 0 samples (0.0%)"],
+                size=14, color=CLR_DARK, bullet="✔")
+
+    # 3 figures in a row
     safe_pic(slide, FIG_DIR / "task4_safety" / "fig_is10500_compliance_heatmap.png",
-             Inches(0.4), Inches(4.4), width=Inches(4.2), height=Inches(2.8))
-
-    safe_pic(slide, FIG_DIR / "task4_safety" / "fig_is10500_exceedance_factor.png",
-             Inches(4.7), Inches(4.4), width=Inches(4.0), height=Inches(2.8))
-
+             Inches(0.3),  Inches(3.66), width=Inches(4.15), height=Inches(3.1))
+    safe_pic(slide, FIG_DIR / "task4_safety" / "fig_is10500_compliance_bars.png",
+             Inches(4.62), Inches(3.66), width=Inches(4.15), height=Inches(3.1))
     safe_pic(slide, FIG_DIR / "task4_safety" / "fig_wqi_analysis.png",
-             Inches(8.9), Inches(4.4), width=Inches(4.0), height=Inches(2.8))
+             Inches(8.95), Inches(3.66), width=Inches(4.1),  height=Inches(3.1))
+
+    add_caption(slide, Inches(0.3),  Inches(6.73), Inches(4.15),
+                "Fig. Compliance heatmap — season × parameter non-compliance %")
+    add_caption(slide, Inches(4.62), Inches(6.73), Inches(4.15),
+                "Fig. Stacked bars — Safe (green) / Caution (yellow) / Unsafe (red)")
+    add_caption(slide, Inches(8.95), Inches(6.73), Inches(4.1),
+                "Fig. WQI histogram + box plot by season + pie chart")
 
     add_footer(slide)
 
 
 def slide_08_source(prs):
-    """SLIDE 8: Anthropogenic & Geogenic Source Analysis"""
+    """SLIDE 8 — Anthropogenic & Geogenic Source Analysis"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "Anthropogenic & Geogenic Source Analysis",
-                  "Piper Diagram, Gibbs Mechanism, Ionic Ratios")
+                  "Dominant Facies: Ca-Cl Type  |  Mechanism: Rock-Water Interaction")
 
-    # Findings
-    src_items = [
-        "Dominant hydrochemical facies: Ca-Cl type",
-        "Gibbs mechanism: Rock-water interaction (weathering dominant)",
-        "Mean Na/(Na+Ca) = 0.444 — below 0.5 confirms rock weathering",
-        "Mean Cl/(Cl+HCO\u2083) = 0.433 — supports weathering over evaporation",
-        "Na/Cl mean = 0.89 — Cl excess suggests anthropogenic input or evaporite dissolution",
-        "Ca/Mg mean = 3.28 — Ca/Mg > 2 indicates calcite dissolution dominant",
-        "NO\u2083: mean = 29.0 mg/L, max = 95.2 mg/L — agricultural/sewage contamination likely",
-        "Na-Cl excess = \u22120.476 meq/L — possible anthropogenic Cl input",
-        "K enrichment (22.6% non-compliant) — probable fertilizer (potash) origin",
-    ]
-    add_bullet_list(slide, Inches(0.6), Inches(1.4), Inches(5.5), Inches(3.2),
-                    src_items, font_size=11)
+    # Left bullets
+    add_text(slide, Inches(0.42), CONTENT_TOP, Inches(5.5), Inches(0.32),
+             "Source Attribution Findings", size=15, bold=True, color=CLR_TEAL)
+    add_bullets(slide, Inches(0.42), CONTENT_TOP + Inches(0.35), Inches(5.5), Inches(3.15),
+                ["Dominant facies: Ca-Cl type (Piper diamond — bottom-right zone)",
+                 "Gibbs mechanism: Rock-water interaction — neither evaporation nor precipitation",
+                 "Mean Na/(Na+Ca) = 0.444 < 0.5 → confirms weathering control",
+                 "Mean Cl/(Cl+HCO₃) = 0.433 → supports weathering over evaporation",
+                 "Ca/Mg mean = 3.28 → calcite dissolution dominates over dolomite",
+                 "Na/Cl mean = 0.89 (<1) → Cl excess suggests anthropogenic input or evaporite",
+                 "NO₃: mean = 23.8 mg/L, max = 95.2 mg/L → agricultural / sewage signal",
+                 "K enrichment (28.2% non-compliant) → probable fertiliser (potash) origin",
+                 "Na-Cl excess = −0.60 meq/L → anthropogenic Cl pathway identified"],
+                size=13, color=CLR_DARK)
 
-    # Figures — Piper and Gibbs
+    # Piper diagram (large)
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_piper_diagram.png",
-             Inches(6.5), Inches(1.3), width=Inches(3.2), height=Inches(2.8))
+             Inches(6.15), CONTENT_TOP, width=Inches(3.55), height=Inches(3.1))
+    add_caption(slide, Inches(6.15), Inches(4.45), Inches(3.55),
+                "Fig. Piper diagram — Ca-Cl facies (bottom-right diamond)")
 
+    # Gibbs diagram
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_gibbs_diagram.png",
-             Inches(9.8), Inches(1.3), width=Inches(3.2), height=Inches(2.8))
+             Inches(9.85), CONTENT_TOP, width=Inches(3.3), height=Inches(3.1))
+    add_caption(slide, Inches(9.85), Inches(4.45), Inches(3.3),
+                "Fig. Gibbs diagram — samples in rock-water interaction zone")
 
+    # Ionic ratios (bottom left)
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_ionic_ratios.png",
-             Inches(0.6), Inches(4.5), width=Inches(5.5), height=Inches(2.7))
+             Inches(0.3),  Inches(4.62), width=Inches(5.8), height=Inches(2.5))
+    add_caption(slide, Inches(0.3), Inches(7.08), Inches(5.8),
+                "Fig. Na/Cl and Ca/Mg ionic ratios by season — Ca/Mg >2 confirms calcite dissolution")
 
-    safe_pic(slide, FIG_DIR / "task3_seasonal" / "fig_distributions.png",
-             Inches(6.5), Inches(4.3), width=Inches(6.3), height=Inches(2.8))
+    # Ionic scatter
+    safe_pic(slide, FIG_DIR / "task5_source" / "fig_piper_ternary.png",
+             Inches(6.3),  Inches(4.62), width=Inches(6.85), height=Inches(2.5))
+    add_caption(slide, Inches(6.3), Inches(7.08), Inches(6.85),
+                "Fig. Piper ternary subplots — cation and anion percentage composition per season")
 
     add_footer(slide)
 
 
 def slide_09_pca_clustering(prs):
-    """SLIDE 9: Parameter Grouping — PCA & Clustering"""
+    """SLIDE 9 — PCA & K-Means Clustering"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
-    add_title_bar(slide, "Parameter Grouping — PCA & Clustering",
-                  "Principal Component Analysis & K-Means Classification")
+    set_bg(slide, CLR_OFF_WHITE)
+    add_title_bar(slide, "Parameter Grouping — PCA & K-Means Clustering",
+                  "6 Principal Components Explain 73.15% of Total Variance  |  3 Hydrochemical Clusters")
 
-    # PCA findings
-    pca_items = [
-        "PCA on 16 standardised parameters (correlation matrix)",
-        "PC1 = 28.7% variance — overall mineralization (EC, TDS, Ca, Na dominant)",
-        "PC2 = 12.2% — carbonate vs non-carbonate weathering (HCO\u2083, Na, Alkalinity)",
-        "PC3 = 12.0% — anthropogenic inputs (Mg, HCO\u2083, Iron)",
-        "PC4 = 7.9% — redox conditions (Iron = 0.488 loading)",
-        "6 PCs explain 73.3% cumulative variance",
-    ]
-    add_bullet_list(slide, Inches(0.6), Inches(1.4), Inches(6), Inches(2.2),
-                    pca_items, font_size=12)
+    # PCA summary
+    add_text(slide, Inches(0.42), CONTENT_TOP, Inches(6.0), Inches(0.32),
+             "Principal Component Analysis", size=15, bold=True, color=CLR_TEAL)
+    add_bullets(slide, Inches(0.42), CONTENT_TOP + Inches(0.35), Inches(6.0), Inches(2.0),
+                ["PC1 (29.3%): Overall mineralisation — high loadings for EC, TDS, Ca, Na",
+                 "PC2 (13.6%): Carbonate buffering — Alkalinity, HCO₃ dominant",
+                 "PC3 (9.8%):  Geogenic Mg vs. anthropogenic NO₃ (negative loading)",
+                 "PC4 (8.2%):  Redox conditions — Iron loading = 0.629",
+                 "6 PCs retained (>73% variance) — scree elbow confirms selection"],
+                size=14, color=CLR_DARK)
 
-    # Clustering findings
-    clust_items = [
-        "K-Means with k = 3 (elbow method optimised)",
-        "Cluster 0: High-mineralization (TDS \u2248 403, EC \u2248 620)",
-        "Cluster 1: Low-mineralization (TDS \u2248 251, EC \u2248 390)",
-        "Cluster 2: Moderate, hardness-enriched (TDS \u2248 356, EC \u2248 559)",
-        "Hierarchical dendrogram confirms 3-cluster structure",
-    ]
-    add_bullet_list(slide, Inches(6.8), Inches(1.4), Inches(6), Inches(2.0),
-                    clust_items, font_size=12)
+    # Clustering summary
+    add_text(slide, Inches(6.65), CONTENT_TOP, Inches(6.38), Inches(0.32),
+             "K-Means Clustering (k = 3)", size=15, bold=True, color=CLR_TEAL)
+    add_bullets(slide, Inches(6.65), CONTENT_TOP + Inches(0.35), Inches(6.38), Inches(2.0),
+                ["Elbow method confirms k=3 as optimal — confirmed by Ward dendrogram",
+                 "Cluster 0 — High mineralisation: TDS ≈ 403, EC ≈ 620 µS/cm",
+                 "Cluster 1 — Low mineralisation:  TDS ≈ 251, EC ≈ 390 µS/cm",
+                 "Cluster 2 — Moderate / hardness-enriched: TDS ≈ 356, EC ≈ 559",
+                 "Monsoon samples dominate Cluster 0 — seasonal enrichment confirmed"],
+                size=14, color=CLR_DARK)
 
-    # Figures
+    # Figures row 1
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_pca_scree.png",
-             Inches(0.4), Inches(3.8), width=Inches(3.2), height=Inches(2.5))
-
+             Inches(0.3),  Inches(3.5), width=Inches(3.2), height=Inches(2.5))
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_pca_biplot.png",
-             Inches(3.8), Inches(3.8), width=Inches(3.0), height=Inches(2.5))
-
+             Inches(3.65), Inches(3.5), width=Inches(3.2), height=Inches(2.5))
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_kmeans_pca.png",
-             Inches(7.0), Inches(3.8), width=Inches(3.0), height=Inches(2.5))
-
+             Inches(7.0),  Inches(3.5), width=Inches(3.2), height=Inches(2.5))
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_dendrogram.png",
-             Inches(10.2), Inches(3.8), width=Inches(2.8), height=Inches(2.5))
+             Inches(10.3), Inches(3.5), width=Inches(2.8), height=Inches(2.5))
 
-    # PCA loadings inline
-    safe_pic(slide, FIG_DIR / "task5_source" / "fig_pca_loadings.png",
-             Inches(0.4), Inches(6.4), width=Inches(4.5), height=Inches(0.9))
+    add_caption(slide, Inches(0.3),  Inches(5.95), Inches(3.2),
+                "Fig. Scree plot — elbow at PC6 (73.15% variance)")
+    add_caption(slide, Inches(3.65), Inches(5.95), Inches(3.2),
+                "Fig. PCA biplot — dots=samples, arrows=parameters")
+    add_caption(slide, Inches(7.0),  Inches(5.95), Inches(3.2),
+                "Fig. K-Means clusters on PC1-PC2 space")
+    add_caption(slide, Inches(10.3), Inches(5.95), Inches(2.8),
+                "Fig. Ward dendrogram — confirms k=3")
+
+    # PCA loadings heatmap
+    safe_pic(slide, FIG_DIR / "task5_source" / "fig_pca_loadings_heatmap.png",
+             Inches(0.3), Inches(6.3), width=Inches(8.5), height=Inches(0.78))
+    add_caption(slide, Inches(0.3), Inches(7.05), Inches(8.5),
+                "Fig. PCA loading heatmap — red=positive/dominant, blue=negative contribution per component")
 
     safe_pic(slide, FIG_DIR / "task5_source" / "fig_elbow.png",
-             Inches(5.5), Inches(6.4), width=Inches(3.5), height=Inches(0.9))
+             Inches(9.0), Inches(6.3), width=Inches(4.1), height=Inches(0.78))
 
     add_footer(slide)
 
 
 def slide_10a_ml(prs):
-    """SLIDE 10a: ML Forecasting — Model Comparison"""
+    """SLIDE 10a — ML Model Comparison"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "ML-Based Forecasting — Model Comparison",
-                  "5 Models × 3 Targets (TDS, EC, WQI) with 80:20 Train-Test Split")
+                  "5 Models × 3 Targets (TDS, EC, WQI)  |  80:20 Split  |  5-Fold CV")
 
-    # Table data — Model performance summary
-    add_textbox(slide, Inches(0.6), Inches(1.4), Inches(12), Inches(0.35),
-                "Best Models: SVR (TDS), Random Forest (EC), Neural Network (WQI)",
-                font_size=15, bold=True, color=CLR_ACCENT)
-
-    # TDS results
-    add_textbox(slide, Inches(0.6), Inches(1.9), Inches(4), Inches(0.3),
-                "TARGET: TDS", font_size=14, bold=True, color=CLR_DARK)
-    tds_items = [
-        "SVR: CV R\u00b2 = 0.732, Test R\u00b2 = 0.767, RMSE = 41.2, MAE = 33.0",
-        "Random Forest: CV R\u00b2 = 0.690, Test R\u00b2 = 0.761, RMSE = 41.8",
-        "XGBoost: CV R\u00b2 = 0.631, Test R\u00b2 = 0.752, RMSE = 42.5",
-        "Gradient Boosting: CV R\u00b2 = 0.620, Test R\u00b2 = 0.698, RMSE = 46.9",
-        "Neural Network: CV R\u00b2 = 0.594, Test R\u00b2 = 0.661, RMSE = 49.7",
+    # Best model callouts
+    callouts = [
+        ("RF",   "Best: TDS\nCV R²=0.753",  CLR_NAVY2),
+        ("RF",   "Best: EC\nCV R²=0.771",   CLR_TEAL_DK),
+        ("NN",   "Best: WQI\nCV R²=0.903",  CLR_GREEN),
+        ("0.764","NSE (TDS-RF)",             CLR_ORANGE),
+        ("8.8%", "MAPE (EC-RF)",             RGBColor(0x6A, 0x3D, 0x9A)),
     ]
-    add_bullet_list(slide, Inches(0.8), Inches(2.25), Inches(4), Inches(1.8),
-                    tds_items, font_size=10)
+    xb = Inches(0.42)
+    for num, lbl, clr in callouts:
+        stat_box(slide, xb, CONTENT_TOP, Inches(2.38), Inches(0.9), num, lbl, bg=clr)
+        xb += Inches(2.5)
 
-    # EC results
-    add_textbox(slide, Inches(4.8), Inches(1.9), Inches(4), Inches(0.3),
-                "TARGET: EC", font_size=14, bold=True, color=CLR_DARK)
-    ec_items = [
-        "Random Forest: CV R\u00b2 = 0.722, Test R\u00b2 = 0.771, RMSE = 58.7, MAE = 44.7",
-        "Gradient Boosting: CV R\u00b2 = 0.681, Test R\u00b2 = 0.785, RMSE = 56.9",
-        "SVR: CV R\u00b2 = 0.677, Test R\u00b2 = 0.699, RMSE = 67.3",
-        "XGBoost: CV R\u00b2 = 0.666, Test R\u00b2 = 0.751, RMSE = 61.2",
-        "Neural Network: CV R\u00b2 = 0.647, Test R\u00b2 = 0.710, RMSE = 66.0",
+    # Per-target result columns
+    targets = [
+        ("TARGET: TDS", [
+            "Random Forest:  CV R²=0.753  ·  Test R²=0.764  ·  RMSE=49.3  ·  MAPE=13.1%",
+            "Gradient Boost: CV R²=0.674  ·  Test R²=0.764  ·  RMSE=49.2",
+            "XGBoost:        CV R²=0.714  ·  Test R²=0.764  ·  RMSE=49.3",
+            "Neural Network: CV R²=0.704  ·  Test R²=0.737  ·  RMSE=52.0",
+            "SVR:            CV R²=0.711  ·  Test R²=0.709  ·  RMSE=54.7",
+        ]),
+        ("TARGET: EC", [
+            "Random Forest:  CV R²=0.771  ·  Test R²=0.757  ·  RMSE=67.6  ·  MAPE=8.8%",
+            "Gradient Boost: CV R²=0.747  ·  Test R²=0.751  ·  RMSE=68.5",
+            "XGBoost:        CV R²=0.742  ·  Test R²=0.718  ·  RMSE=72.9",
+            "Neural Network: CV R²=0.740  ·  Test R²=0.725  ·  RMSE=72.0",
+            "SVR:            CV R²=0.715  ·  Test R²=0.736  ·  RMSE=70.5",
+        ]),
+        ("TARGET: WQI", [
+            "Neural Network: CV R²=0.903  ·  Test R²=0.954  ·  RMSE=2.1   ·  MAPE=3.2%",
+            "SVR:            CV R²=0.883  ·  Test R²=0.951  ·  RMSE=2.1",
+            "XGBoost:        CV R²=0.830  ·  Test R²=0.886  ·  RMSE=3.3",
+            "Gradient Boost: CV R²=0.830  ·  Test R²=0.881  ·  RMSE=3.3",
+            "Random Forest:  CV R²=0.800  ·  Test R²=0.863  ·  RMSE=3.6",
+        ]),
     ]
-    add_bullet_list(slide, Inches(5.0), Inches(2.25), Inches(4), Inches(1.8),
-                    ec_items, font_size=10)
+    xp = Inches(0.3)
+    for title, items in targets:
+        add_text(slide, xp, Inches(2.55), Inches(4.3), Inches(0.34),
+                 title, size=14, bold=True, color=CLR_NAVY2)
+        add_rect(slide, xp, Inches(2.9), Inches(4.3), Inches(1.75), CLR_PANEL, CLR_DIVIDER)
+        iy = Inches(2.95)
+        for line in items:
+            clr = CLR_TEAL if "Random Forest" in line or "Neural Network" in line else CLR_DARK
+            bold = "Random Forest" in line or "Neural Network" in line
+            add_text(slide, xp + Inches(0.1), iy, Inches(4.1), Inches(0.3),
+                     line, size=11, bold=bold, color=clr)
+            iy += Inches(0.33)
+        xp += Inches(4.42)
 
-    # WQI results
-    add_textbox(slide, Inches(9.0), Inches(1.9), Inches(4), Inches(0.3),
-                "TARGET: WQI", font_size=14, bold=True, color=CLR_DARK)
-    wqi_items = [
-        "Neural Network: CV R\u00b2 = 0.903, Test R\u00b2 = 0.954, RMSE = 2.1, MAE = 1.6",
-        "SVR: CV R\u00b2 = 0.883, Test R\u00b2 = 0.951, RMSE = 2.1",
-        "XGBoost: CV R\u00b2 = 0.830, Test R\u00b2 = 0.886, RMSE = 3.3",
-        "Gradient Boosting: CV R\u00b2 = 0.830, Test R\u00b2 = 0.881, RMSE = 3.3",
-        "Random Forest: CV R\u00b2 = 0.800, Test R\u00b2 = 0.863, RMSE = 3.6",
-    ]
-    add_bullet_list(slide, Inches(9.2), Inches(2.25), Inches(3.8), Inches(1.8),
-                    wqi_items, font_size=10)
-
-    # Figures
+    # Actual vs predicted figures
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_actual_vs_predicted_tds.png",
-             Inches(0.3), Inches(4.3), width=Inches(4.2), height=Inches(2.9))
-
+             Inches(0.3),  Inches(4.82), width=Inches(4.2), height=Inches(2.2))
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_actual_vs_predicted_ec.png",
-             Inches(4.6), Inches(4.3), width=Inches(4.2), height=Inches(2.9))
-
+             Inches(4.6),  Inches(4.82), width=Inches(4.2), height=Inches(2.2))
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_actual_vs_predicted_wqi.png",
-             Inches(9.0), Inches(4.3), width=Inches(4.0), height=Inches(2.9))
+             Inches(9.0),  Inches(4.82), width=Inches(4.1), height=Inches(2.2))
+
+    add_caption(slide, Inches(0.3),  Inches(6.98), Inches(4.2),
+                "Fig. Actual vs. Predicted TDS — points on 1:1 line = perfect prediction")
+    add_caption(slide, Inches(4.6),  Inches(6.98), Inches(4.2),
+                "Fig. Actual vs. Predicted EC — RF (blue) hugs the line most tightly")
+    add_caption(slide, Inches(9.0),  Inches(6.98), Inches(4.1),
+                "Fig. Actual vs. Predicted WQI — NN achieves R²=0.954")
 
     add_footer(slide)
 
 
-def slide_10b_shap_residuals(prs):
-    """SLIDE 10b: SHAP Explainability & Residual Analysis + Uncertainty"""
+def slide_10b_shap(prs):
+    """SLIDE 10b — SHAP Explainability & Residuals"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
+    set_bg(slide, CLR_OFF_WHITE)
     add_title_bar(slide, "SHAP Explainability, Residuals & Uncertainty Metrics",
-                  "Feature Importance, Generalization Ability, NSE, RSR, MAPE")
+                  "SHapley Additive exPlanations — Interpreting Black-Box ML Predictions")
 
-    # Uncertainty metrics header
-    add_textbox(slide, Inches(0.6), Inches(1.4), Inches(6), Inches(0.35),
-                "Generalization & Uncertainty — Best Model Per Target",
-                font_size=14, bold=True, color=CLR_ACCENT)
-    uncert_items = [
-        "TDS (SVR):  GA = 0.774, MAPE = 10.9%, NSE = 0.767, RSR = 0.483",
-        "EC  (RF):   GA = 0.798, MAPE = 10.4%, NSE = 0.771, RSR = 0.479",
-        "WQI (NN):   GA = 0.964, MAPE = 3.2%, NSE = 0.953, RSR = 0.216",
-        "WQI: Excellent GA (>0.9); TDS/EC: Good GA (0.7\u20130.9) — noise reduces overfitting",
-    ]
-    add_bullet_list(slide, Inches(0.8), Inches(1.8), Inches(5.5), Inches(1.6),
-                    uncert_items, font_size=11)
+    # SHAP explanation
+    interp_box(slide, Inches(0.42), CONTENT_TOP, Inches(12.5), Inches(0.72),
+               "SHAP decomposes each model prediction into per-feature contributions. "
+               "Each dot = one sample; X-position = how much that feature pushed "
+               "the prediction up (right) or down (left); colour = feature value (red=high, blue=low). "
+               "Ca and Na consistently push TDS/EC upward across all samples — confirming Ca-Cl geochemistry.")
 
-    # Feature importance
-    add_textbox(slide, Inches(6.8), Inches(1.4), Inches(6), Inches(0.35),
-                "Top Features (Random Forest / XGBoost)",
-                font_size=14, bold=True, color=CLR_ACCENT)
-    feat_items = [
-        "TDS: Na (0.330), Ca (0.291), K (0.086), Season (0.086)",
-        "EC:  Na (0.395), Ca (0.238), K (0.116), SO\u2084 (0.041)",
-        "WQI: EC (0.400), TDS (0.209), NO\u2083 (0.132), K (0.071)",
-        "SHAP confirms Na, Ca, EC as primary drivers of water quality",
-    ]
-    add_bullet_list(slide, Inches(7.0), Inches(1.8), Inches(6), Inches(1.6),
-                    feat_items, font_size=11)
+    # Feature importance bullets
+    add_text(slide, Inches(0.42), Inches(2.38), Inches(5.5), Inches(0.32),
+             "Top SHAP Features", size=15, bold=True, color=CLR_TEAL)
+    add_bullets(slide, Inches(0.42), Inches(2.73), Inches(5.5), Inches(1.65),
+                ["TDS:  Ca (42.5%) > Na (28.6%) > K (6.8%)",
+                 "EC:   Na (45.9%) > Ca (21.0%) > K (11.8%)",
+                 "WQI:  EC (40.0%) > TDS (20.9%) > NO₃ (13.2%)",
+                 "Uncertainty (TDS-RF):  GA=0.788 · NSE=0.764 · RSR=0.486 · MAPE=13.1%",
+                 "Uncertainty (EC-RF):   GA=0.781 · NSE=0.757 · RSR=0.493 · MAPE=8.8%"],
+                size=14, color=CLR_DARK)
 
-    # Figures — SHAP and Residuals
+    # Feature importance figure
+    safe_pic(slide, FIG_DIR / "task6_ml" / "fig_feature_importance.png",
+             Inches(6.0), Inches(2.35), width=Inches(7.15), height=Inches(2.1))
+    add_caption(slide, Inches(6.0), Inches(4.4), Inches(7.15),
+                "Fig. Gini-based feature importance (RF) for TDS, EC, WQI — Ca and Na dominate")
+
+    # SHAP summary plots (beeswarm)
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_shap_summary_tds.png",
-             Inches(0.3), Inches(3.5), width=Inches(4.2), height=Inches(1.8))
-
+             Inches(0.3),  Inches(4.55), width=Inches(4.25), height=Inches(1.9))
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_shap_summary_ec.png",
-             Inches(4.6), Inches(3.5), width=Inches(4.2), height=Inches(1.8))
-
+             Inches(4.65), Inches(4.55), width=Inches(4.25), height=Inches(1.9))
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_shap_summary_wqi.png",
-             Inches(9.0), Inches(3.5), width=Inches(4.0), height=Inches(1.8))
+             Inches(9.05), Inches(4.55), width=Inches(4.1),  height=Inches(1.9))
 
+    add_caption(slide, Inches(0.3),  Inches(6.40), Inches(4.25),
+                "Fig. SHAP beeswarm (TDS) — red=high Ca/Na pushes TDS up")
+    add_caption(slide, Inches(4.65), Inches(6.40), Inches(4.25),
+                "Fig. SHAP beeswarm (EC) — Na dominates EC predictions")
+    add_caption(slide, Inches(9.05), Inches(6.40), Inches(4.1),
+                "Fig. SHAP beeswarm (WQI) — EC and TDS are key WQI drivers")
+
+    # Residuals strip
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_residuals_tds.png",
-             Inches(0.3), Inches(5.4), width=Inches(4.2), height=Inches(1.8))
-
+             Inches(0.3),  Inches(6.62), width=Inches(4.25), height=Inches(0.62))
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_residuals_ec.png",
-             Inches(4.6), Inches(5.4), width=Inches(4.2), height=Inches(1.8))
-
+             Inches(4.65), Inches(6.62), width=Inches(4.25), height=Inches(0.62))
     safe_pic(slide, FIG_DIR / "task6_ml" / "fig_residuals_wqi.png",
-             Inches(9.0), Inches(5.4), width=Inches(4.0), height=Inches(1.8))
+             Inches(9.05), Inches(6.62), width=Inches(4.1),  height=Inches(0.62))
 
     add_footer(slide)
 
 
 def slide_11_conclusion(prs):
-    """SLIDE 11: Conclusions"""
+    """SLIDE 11 — Conclusions & Recommendations"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
-    add_title_bar(slide, "Conclusions & Policy Recommendations")
+    set_bg(slide, CLR_OFF_WHITE)
+    add_title_bar(slide, "Conclusions & Policy Recommendations",
+                  "Evidence-Based Findings from 7-Task Hydrochemical Intelligence Pipeline")
 
-    # Key conclusions
-    add_textbox(slide, Inches(0.6), Inches(1.4), Inches(6), Inches(0.35),
-                "Key Findings", font_size=16, bold=True, color=CLR_ACCENT)
-    conclusions = [
-        "93.8% of all samples classified as UNSAFE under IS 10500:2012",
-        "pH (76.4% unsafe), Iron (51.8%), NO\u2083 (23.6%), K (22.6%) are primary risk drivers",
-        "Dominant facies: Ca-Cl — rock-water interaction (weathering) controls chemistry",
-        "Monsoon is the worst season (221 exceedances) due to surface runoff mobilisation",
-        "WQI range [30.6, 77.0] — no samples in 'Poor' or 'Unsuitable' categories",
-        "Best models: SVR (TDS, CV R\u00b2=0.73), RF (EC, 0.72), NN (WQI, 0.90)",
-        "SHAP confirms Na, Ca, EC as dominant drivers; NO\u2083, K signal anthropogenic loading",
-        "Noisy synthetic augmentation (150 samples) reduces overfitting & improves generalisability",
-    ]
-    add_bullet_list(slide, Inches(0.8), Inches(1.85), Inches(5.8), Inches(3.0),
-                    conclusions, font_size=12)
+    # Key findings
+    add_text(slide, Inches(0.42), CONTENT_TOP, Inches(6.0), Inches(0.34),
+             "Key Scientific Findings", size=16, bold=True, color=CLR_TEAL)
+    add_bullets(slide, Inches(0.42), CONTENT_TOP + Inches(0.38), Inches(6.0), Inches(4.42),
+                ["pH (75.4% unsafe) — natural geological acidity of Odisha's alluvial aquifers",
+                 "Iron (45.1% unsafe) — geogenic, laterite soils release Fe²⁺ under reducing conditions",
+                 "K (28.2%) and NO₃ (11.8%) non-compliance — probable agricultural (fertiliser) inputs",
+                 "Dominant facies: Ca-Cl type — rock-water interaction controls chemistry (Gibbs zone)",
+                 "Monsoon is worst season — 210 IS 10500 exceedances vs 88 in Premonsoon",
+                 "WQI range 30.81–77.04 — all 195 samples in 'Excellent' or 'Good' categories",
+                 "Best ML models: RF (TDS CV R²=0.753), RF (EC CV R²=0.771), NN (WQI CV R²=0.903)",
+                 "SHAP confirms Ca and Na as dominant TDS/EC drivers — consistent with Ca-Cl facies",
+                 "IA-3 is most contaminated site: TDS=393.6 mg/L, EC=607.5 µS/cm, pH=5.87"],
+                size=13, color=CLR_DARK, spacing_after=4)
 
     # Policy recommendations
-    add_textbox(slide, Inches(7.0), Inches(1.4), Inches(6), Inches(0.35),
-                "Policy Recommendations", font_size=16, bold=True, color=CLR_ACCENT)
-    policies = [
-        "Establish continuous groundwater quality monitoring at IA-3, DY-4, IA-1",
-        "pH correction: alkaline dosing (lime/soda ash) at extraction points",
-        "Regulate fertilizer (potash) use near K-enriched zones (22.6% non-compliant)",
-        "Implement rainwater harvesting to enhance natural aquifer recharge",
-        "Manage organic waste near DY sites to reduce acidification risk",
-        "Periodic ionic balance (CBE) validation ensures data quality assurance",
-        "Deploy target-specific best models: SVR (TDS), RF (EC), NN (WQI) for forecasting",
-        "Climate-adaptive monitoring — monsoon variability may shift recharge patterns",
-    ]
-    add_bullet_list(slide, Inches(7.2), Inches(1.85), Inches(5.6), Inches(3.0),
-                    policies, font_size=12)
+    add_text(slide, Inches(6.65), CONTENT_TOP, Inches(6.38), Inches(0.34),
+             "Policy Recommendations", size=16, bold=True, color=CLR_GOLD)
+    rec_clr = RGBColor(0x4A, 0x2C, 0x01)
+    add_bullets(slide, Inches(6.65), CONTENT_TOP + Inches(0.38), Inches(6.3), Inches(2.5),
+                ["pH correction: lime/soda-ash alkaline dosing at extraction points",
+                 "Regulate K-based fertiliser use near IA zone groundwater catchments",
+                 "Establish real-time monitoring at IA-3, DY-4, IA-1 (highest risk)",
+                 "Rainwater harvesting to boost natural aquifer recharge rates",
+                 "Manage organic waste at DY sites to prevent acidification",
+                 "Deploy RF model for TDS/EC early-warning forecasting",
+                 "Climate-adaptive seasonal monitoring — monsoon variability critical"],
+                size=13, color=CLR_DARK)
 
-    # Health implications box
-    add_textbox(slide, Inches(0.6), Inches(5.2), Inches(12), Inches(0.35),
-                "Health Implications", font_size=14, bold=True, color=CLR_RED)
-    health_items = [
-        "pH < 6.5: Corrosive water — metal leaching from pipes (Cu, Pb risk)",
-        "NO\u2083 > 45 mg/L: Methemoglobinemia (blue baby syndrome) risk at some locations",
-        "Iron (51.8% unsafe): Exceeds 0.3 mg/L — taste issues, bacterial growth promotion",
-        "Low DO (12.3% unsafe, 39.5% caution): Organic contamination in monsoon samples",
-    ]
-    add_bullet_list(slide, Inches(0.8), Inches(5.6), Inches(12), Inches(1.5),
-                    health_items, font_size=11, color=CLR_DARK)
+    # Health implications panel
+    add_rect(slide, Inches(6.65), Inches(4.1), Inches(6.38), Inches(2.7), CLR_RED_LT, CLR_RED)
+    add_text(slide, Inches(6.78), Inches(4.15), Inches(6.1), Inches(0.35),
+             "⚠ Health Implications", size=14, bold=True, color=CLR_RED)
+    add_bullets(slide, Inches(6.78), Inches(4.5), Inches(6.1), Inches(2.25),
+                ["pH < 6.5 — corrosive water, metal leaching risk (Cu, Pb from pipes)",
+                 "NO₃ > 45 mg/L — methemoglobinemia (blue-baby syndrome) risk",
+                 "Iron > 0.3 mg/L — taste issues, promotes bacteria growth (51.8% samples)",
+                 "Low DO — indicates organic contamination load in monsoon"],
+                size=13, color=CLR_DARK)
 
     add_footer(slide)
 
 
 def slide_12_acknowledgement(prs):
-    """SLIDE 12: Acknowledgement"""
+    """SLIDE 12 — Acknowledgement"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_TITLE_BG)
+    set_bg(slide, CLR_NAVY)
 
-    add_textbox(slide, Inches(1), Inches(1.5), Inches(11), Inches(0.8),
-                "Acknowledgement",
-                font_size=36, bold=True, color=CLR_WHITE, alignment=PP_ALIGN.CENTER)
+    # Decorative circle
+    s = slide.shapes.add_shape(MSO_SHAPE.OVAL,
+        SLIDE_W - Inches(3.5), SLIDE_H - Inches(3.5), Inches(4.5), Inches(4.5))
+    s.fill.solid(); s.fill.fore_color.rgb = CLR_NAVY2; s.line.fill.background()
 
-    add_teal_rule(slide, Inches(4), Inches(2.4), Inches(5))
+    # Gold top rule
+    add_rect(slide, Inches(0), Inches(0), SLIDE_W, Inches(0.14), CLR_GOLD)
 
-    ack_text = (
-        "We express our sincere gratitude to Dr. Ajit Kumar Pasayat\n"
-        "for his invaluable guidance and mentorship throughout this project.\n\n"
+    add_text(slide, Inches(1), Inches(0.3), Inches(11), Inches(0.75),
+             "Acknowledgement",
+             size=38, bold=True, color=CLR_WHITE, align=PP_ALIGN.CENTER)
+
+    rule(slide, Inches(4), Inches(1.2), Inches(5), CLR_TEAL)
+
+    ack = (
+        "We extend our sincere gratitude to\n\n"
+        "Dr. Ajit Kumar Pasayat\n"
+        "for his invaluable guidance, mentorship, and continuous support\n"
+        "throughout the course of this project.\n\n"
         "We also thank the School of Civil Engineering,\n"
         "KIIT Deemed to be University, Bhubaneswar,\n"
-        "for providing the laboratory facilities and groundwater sampling infrastructure.\n\n"
-        "This study was conducted as part of the coursework\n"
-        "for the Academic Year 2024–25."
+        "for providing laboratory facilities and field sampling infrastructure.\n\n"
+        "This study was conducted as part of the Academic Year 2024–25 coursework."
     )
-    add_textbox(slide, Inches(1.5), Inches(2.9), Inches(10), Inches(2.5),
-                ack_text, font_size=18, color=CLR_WHITE, alignment=PP_ALIGN.CENTER)
+    add_text(slide, Inches(1.5), Inches(1.55), Inches(10), Inches(4.0),
+             ack, size=17, color=CLR_WHITE, align=PP_ALIGN.CENTER)
 
-    add_textbox(slide, Inches(1), Inches(5.6), Inches(11), Inches(0.5),
-                "Lakshya Nayyar (23053133)  |  Vaibhav Bhaskar (23053173)",
-                font_size=16, color=CLR_ACCENT, alignment=PP_ALIGN.CENTER)
+    rule(slide, Inches(3), Inches(5.78), Inches(7.3), CLR_GOLD)
 
-    add_textbox(slide, Inches(1), Inches(6.2), Inches(11), Inches(0.4),
-                "School of Civil Engineering, KIIT University, Bhubaneswar",
-                font_size=13, color=CLR_GREY, alignment=PP_ALIGN.CENTER)
+    add_text(slide, Inches(1), Inches(5.98), Inches(11), Inches(0.5),
+             "Lakshya Nayyar (23053133)     |     Vaibhav Bhaskar (23053173)",
+             size=16, bold=True, color=CLR_TEAL, align=PP_ALIGN.CENTER)
 
-    add_footer(slide, "Thank You")
+    add_text(slide, Inches(1), Inches(6.52), Inches(11), Inches(0.45),
+             "School of Civil Engineering  ·  KIIT Deemed to be University  ·  Bhubaneswar",
+             size=12, color=CLR_GREY, align=PP_ALIGN.CENTER)
+
+    add_rect(slide, Inches(0), Inches(7.08), SLIDE_W, Inches(0.42), CLR_GOLD)
+    add_text(slide, Inches(0), Inches(7.1), SLIDE_W, Inches(0.38),
+             "Thank You", size=18, bold=True, color=CLR_NAVY, align=PP_ALIGN.CENTER)
 
 
 def slide_13_references(prs):
-    """SLIDE 13 (Bonus): References"""
+    """SLIDE 13 — References"""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    set_slide_bg(slide, CLR_CONTENT_BG)
-    add_title_bar(slide, "References")
+    set_bg(slide, CLR_OFF_WHITE)
+    add_title_bar(slide, "References",
+                  "Standards · Methodological Sources · Literature")
 
     refs = [
-        "1. Bureau of Indian Standards (BIS). IS 10500:2012 — Drinking Water Specification (Second Revision). New Delhi: BIS, 2012.",
-        "2. World Health Organization (WHO). Guidelines for Drinking-water Quality, 4th Edition. Geneva: WHO, 2011.",
-        "3. Brown, R.M., McClelland, N., Deininger, R.A. & Tozer, R.G. (1970). A Water Quality Index — Do We Dare? Water & Sewage Works, 117(10).",
-        "4. Sekar, S., et al. (2025). Machine learning-based prediction of seasonal groundwater quality for Melur, Tamil Nadu. Results in Engineering, 28.",
-        "5. Piper, A.M. (1944). A Graphic Procedure in the Geochemical Interpretation of Water Analyses. Trans. AGU, 25(6), 914–928.",
-        "6. Gibbs, R.J. (1970). Mechanisms Controlling World Water Chemistry. Science, 170(3962), 1088–1090.",
-        "7. Lundberg, S.M. & Lee, S.-I. (2017). A Unified Approach to Interpreting Model Predictions. NeurIPS 2017.",
-        "8. Central Pollution Control Board (CPCB). Drinking Water Quality Standards — Class A Criteria. Government of India.",
-        "9. FSSAI / Government of India. Food Safety and Standards (Drinking Water) Regulations.",
+        ("IS 10500:2012",  "Bureau of Indian Standards. Drinking Water Specification, Second Revision. New Delhi: BIS, 2012."),
+        ("WHO 2011",       "World Health Organization. Guidelines for Drinking-water Quality, 4th Edition. Geneva: WHO, 2011."),
+        ("Brown 1970",     "Brown R.M. et al. A Water Quality Index — Do We Dare? Water & Sewage Works, 117(10), 1970."),
+        ("Sekar 2025",     "Sekar S. et al. ML-based prediction of seasonal groundwater quality for Melur, Tamil Nadu. Results in Engineering, 28, 2025."),
+        ("Piper 1944",     "Piper A.M. A Graphic Procedure in the Geochemical Interpretation of Water Analyses. Trans. AGU, 25(6), 914–928, 1944."),
+        ("Gibbs 1970",     "Gibbs R.J. Mechanisms Controlling World Water Chemistry. Science, 170(3962), 1088–1090, 1970."),
+        ("Lundberg 2017",  "Lundberg S.M. & Lee S.-I. A Unified Approach to Interpreting Model Predictions. NeurIPS 2017."),
+        ("Hair 2010",      "Hair J.F. et al. Multivariate Data Analysis. Pearson, 7th Edition, 2010."),
+        ("CPCB / FSSAI",   "Central Pollution Control Board. Drinking Water Quality — Class A Criteria. Govt. of India."),
     ]
 
-    txBox = slide.shapes.add_textbox(Inches(0.6), Inches(1.5), Inches(12), Inches(5.5))
-    tf = txBox.text_frame
-    tf.word_wrap = True
-    for i, ref in enumerate(refs):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
-        p.text = ref
-        p.font.size = Pt(12)
-        p.font.color.rgb = CLR_DARK
-        p.font.name = FONT_NAME
-        p.space_after = Pt(8)
+    y = CONTENT_TOP
+    for tag, text in refs:
+        add_rect(slide, Inches(0.42), y, Inches(1.8), Inches(0.45), CLR_TEAL, rounding=True)
+        add_text(slide, Inches(0.42), y + Inches(0.06), Inches(1.8), Inches(0.35),
+                 tag, size=11, bold=True, color=CLR_WHITE, align=PP_ALIGN.CENTER)
+        add_text(slide, Inches(2.35), y + Inches(0.04), Inches(10.6), Inches(0.4),
+                 text, size=12, color=CLR_DARK)
+        y += Inches(0.58)
 
     add_footer(slide)
 
 
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
 # MAIN
-# ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
 
 def main():
     print("=" * 70)
-    print("  GENERATING POWERPOINT PRESENTATION")
+    print("  GENERATING ENHANCED POWERPOINT PRESENTATION")
     print("=" * 70)
 
     prs = Presentation()
+    prs.slide_width  = Emu(12192000)   # 13.333 inches
+    prs.slide_height = Emu(6858000)    # 7.5 inches
 
-    # Set widescreen slide size (13.333 × 7.5 inches)
-    prs.slide_width = Emu(12192000)   # 13.333 inches
-    prs.slide_height = Emu(6858000)   # 7.5 inches
-
-    # Build all slides
     builders = [
-        ("Slide 1:  Title", slide_01_title),
-        ("Slide 2:  Outline", slide_02_outline),
-        ("Slide 3:  Introduction & Study Area", slide_03_introduction),
-        ("Slide 4:  Dataset & Synthetic Augmentation", slide_04_dataset),
-        ("Slide 5:  Methodology Pipeline", slide_05_methodology),
-        ("Slide 6a: Seasonal Dynamics — Statistics", slide_06a_seasonal),
-        ("Slide 6b: Seasonal Variation — Distributions", slide_06b_seasonal),
-        ("Slide 7:  IS 10500 Compliance & WQI", slide_07_compliance_wqi),
-        ("Slide 8:  Source Analysis", slide_08_source),
-        ("Slide 9:  PCA & Clustering", slide_09_pca_clustering),
-        ("Slide 10a: ML Model Comparison", slide_10a_ml),
-        ("Slide 10b: SHAP & Residuals", slide_10b_shap_residuals),
-        ("Slide 11:  Conclusions", slide_11_conclusion),
-        ("Slide 12:  Acknowledgement", slide_12_acknowledgement),
-        ("Slide 13:  References", slide_13_references),
+        ("Slide 01: Title",                  slide_01_title),
+        ("Slide 02: Outline",                slide_02_outline),
+        ("Slide 03: Introduction",           slide_03_introduction),
+        ("Slide 04: Dataset & Augmentation", slide_04_dataset),
+        ("Slide 05: Methodology",            slide_05_methodology),
+        ("Slide 06a: Seasonal — Stats",      slide_06a_seasonal),
+        ("Slide 06b: Seasonal — Corr/Radar", slide_06b_seasonal),
+        ("Slide 07: IS 10500 & WQI",         slide_07_compliance_wqi),
+        ("Slide 08: Source Analysis",        slide_08_source),
+        ("Slide 09: PCA & Clustering",       slide_09_pca_clustering),
+        ("Slide 10a: ML Models",             slide_10a_ml),
+        ("Slide 10b: SHAP & Residuals",      slide_10b_shap),
+        ("Slide 11: Conclusions",            slide_11_conclusion),
+        ("Slide 12: Acknowledgement",         slide_12_acknowledgement),
+        ("Slide 13: References",             slide_13_references),
     ]
 
     for label, builder in builders:
@@ -897,10 +1056,13 @@ def main():
         builder(prs)
 
     prs.save(str(OUT_PPT))
-    print(f"\n  Saved to: {OUT_PPT}")
-    print(f"  Total slides: {len(prs.slides)}")
+    size_kb = OUT_PPT.stat().st_size / 1024
+    print(f"\n  ✓ Saved: {OUT_PPT}")
+    print(f"  ✓ Size:  {size_kb:.1f} KB")
+    print(f"  ✓ Slides: {len(prs.slides)}")
     print("=" * 70)
 
 
 if __name__ == "__main__":
     main()
+
