@@ -1,0 +1,60 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Premonsoon Season — Bhubaneswar Groundwater 2024</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; margin: 20px; }
+  h1 { color: #1a3a5c; font-size: 1.4em; border-bottom: 3px solid #2E86AB; padding-bottom: 8px; }
+  h2 { color: #2E86AB; font-size: 1.1em; margin-top: 30px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.82em; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  th { background: #1a3a5c; color: #fff; padding: 9px 6px; text-align: center; position: sticky; top: 0; }
+  th.factor-name { background: #2E86AB; font-style: italic; font-size: 0.9em; }
+  td { padding: 7px 6px; text-align: center; border: 1px solid #dde4ee; }
+  tr:nth-child(even) { background: #f7f9fc; }
+  tr:hover { background: #e8f0fb; }
+  .param-col { text-align: left; font-weight: 600; color: #1a3a5c; white-space: nowrap; }
+  .strong-pos { background: #1a7a40; color: #fff; font-weight: bold; }
+  .strong-neg { background: #c0392b; color: #fff; font-weight: bold; }
+  .mod-pos    { background: #a8e6bf; color: #1a3a5c; }
+  .mod-neg    { background: #f5b7b1; color: #1a3a5c; }
+  .weak       { background: #fef9c3; color: #555; }
+  .negl       { background: #f5f5f5; color: #bbb; }
+  .geo        { background: #d5f5e3; color: #1a7a40; font-weight: bold; }
+  .ant        { background: #fadbd8; color: #c0392b; font-weight: bold; }
+  .mixed      { background: #fef9c3; color: #b7770d; font-weight: bold; }
+  .stat-row   { background: #e8f0fb; font-style: italic; }
+  .eigen-row  { background: #d6eaf8; font-weight: bold; }
+  .note       { font-size: 0.78em; color: #666; margin-top: 10px; font-style: italic; }
+  .tab-bar    { display: flex; gap: 8px; margin: 20px 0 0 0; flex-wrap: wrap; }
+  .tab-btn    { padding: 8px 18px; border: none; border-radius: 4px 4px 0 0; cursor: pointer;
+                background: #b0c4de; color: #1a3a5c; font-weight: 600; font-size: 0.9em; }
+  .tab-btn.active { background: #2E86AB; color: #fff; }
+  .tab-content { display: none; padding: 0; }
+  .tab-content.active { display: block; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; font-size: 0.8em; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 18px; height: 18px; border-radius: 3px; }
+</style>
+</head><body>
+<h1>Factor Analysis — Rotated Component Matrix<br><small>Premonsoon Season — Bhubaneswar Groundwater 2024</small></h1>
+<p>n = 15 samples | 3 components retained (Kaiser: eigenvalue &gt; 1) |
+   Rotation: Varimax | Total variance explained: 20.0%</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#1a7a40"></div>Strong positive ≥0.70</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#a8e6bf"></div>Moderate positive 0.50–0.69</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#fef9c3;border:1px solid #ccc"></div>Weak 0.30–0.49</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#f5f5f5;border:1px solid #ccc"></div>Negligible &lt;0.30</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#c0392b"></div>Strong negative ≤−0.70</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#f5b7b1"></div>Moderate negative −0.50–−0.69</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#d5f5e3;border:1px solid #ccc"></div>GEOGENIC source</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#fadbd8;border:1px solid #ccc"></div>ANTHROPOGENIC source</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#fef9c3;border:1px solid #ccc"></div>MIXED source</div>
+</div>
+
+<div style="overflow-x:auto">
+<table><thead><tr><th class='param-col'>Parameter</th><th class='factor-name'>Factor 1</th><th class='factor-name'>Factor 2</th><th class='factor-name'>Factor 3</th><th>Communality</th><th>Dominant Factor</th><th>Source Attribution</th></tr><tr><th class='param-col'>Component →</th><th>PC1</th><th>PC2</th><th>PC3</th><th></th><th></th><th></th></tr></thead><tbody>
+<tr><td class='param-col'>pH</td><td class='negl'><span style='color:#bbb'>+0.044</span></td><td class='mod-pos'>+0.551</td><td class='negl'><span style='color:#bbb'>+0.051</span></td><td>0.308</td><td style='font-size:0.8em;text-align:left'>PC2 (Factor 2)</td><td class='mixed'>MIXED</td></tr><tr><td class='param-col'>EC (μS/cm)</td><td class='negl'><span style='color:#bbb'>+0.258</span></td><td class='negl'><span style='color:#bbb'>+0.040</span></td><td class='negl'><span style='color:#bbb'>-0.224</span></td><td>0.118</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='ant'>ANTHROPOGENIC</td></tr><tr><td class='param-col'>TDS (mg/L)</td><td class='negl'><span style='color:#bbb'>+0.259</span></td><td class='negl'><span style='color:#bbb'>+0.041</span></td><td class='negl'><span style='color:#bbb'>-0.223</span></td><td>0.118</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='ant'>ANTHROPOGENIC</td></tr><tr><td class='param-col'>TH (mg/L)</td><td class='negl'><span style='color:#bbb'>-0.055</span></td><td class='mod-pos'>+0.545</td><td class='negl'><span style='color:#bbb'>-0.112</span></td><td>0.312</td><td style='font-size:0.8em;text-align:left'>PC2 (Factor 2)</td><td class='geo'>GEOGENIC</td></tr><tr><td class='param-col'>TA (mg/L)</td><td class='weak'>+0.384</td><td class='negl'><span style='color:#bbb'>+0.003</span></td><td class='negl'><span style='color:#bbb'>-0.067</span></td><td>0.152</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='geo'>GEOGENIC</td></tr><tr><td class='param-col'>Ca²⁺ (mg/L)</td><td class='negl'><span style='color:#bbb'>+0.147</span></td><td class='negl'><span style='color:#bbb'>-0.072</span></td><td class='weak'>-0.302</td><td>0.118</td><td style='font-size:0.8em;text-align:left'>PC3 (Factor 3)</td><td class='geo'>GEOGENIC</td></tr><tr><td class='param-col'>Mg²⁺ (mg/L)</td><td class='weak'>+0.445</td><td class='negl'><span style='color:#bbb'>+0.029</span></td><td class='negl'><span style='color:#bbb'>+0.065</span></td><td>0.203</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='geo'>GEOGENIC</td></tr><tr><td class='param-col'>Na⁺ (mg/L)</td><td class='negl'><span style='color:#bbb'>-0.011</span></td><td class='negl'><span style='color:#bbb'>+0.020</span></td><td class='weak'>-0.443</td><td>0.197</td><td style='font-size:0.8em;text-align:left'>PC3 (Factor 3)</td><td class='ant'>ANTHROPOGENIC</td></tr><tr><td class='param-col'>K⁺ (mg/L)</td><td class='weak'>+0.311</td><td class='negl'><span style='color:#bbb'>+0.067</span></td><td class='negl'><span style='color:#bbb'>-0.059</span></td><td>0.105</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='ant'>ANTHROPOGENIC</td></tr><tr><td class='param-col'>Iron (mg/L)</td><td class='negl'><span style='color:#bbb'>+0.210</span></td><td class='negl'><span style='color:#bbb'>-0.268</span></td><td class='negl'><span style='color:#bbb'>-0.248</span></td><td>0.178</td><td style='font-size:0.8em;text-align:left'>PC2 (Factor 2)</td><td class='mixed'>MIXED</td></tr><tr><td class='param-col'>HCO₃⁻ (mg/L)</td><td class='mod-pos'>+0.504</td><td class='negl'><span style='color:#bbb'>-0.057</span></td><td class='negl'><span style='color:#bbb'>+0.234</span></td><td>0.312</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='geo'>GEOGENIC</td></tr><tr><td class='param-col'>Cl⁻ (mg/L)</td><td class='negl'><span style='color:#bbb'>-0.145</span></td><td class='negl'><span style='color:#bbb'>+0.210</span></td><td class='mod-neg'>-0.500</td><td>0.315</td><td style='font-size:0.8em;text-align:left'>PC3 (Factor 3)</td><td class='ant'>ANTHROPOGENIC</td></tr><tr><td class='param-col'>SO₄²⁻ (mg/L)</td><td class='negl'><span style='color:#bbb'>+0.266</span></td><td class='negl'><span style='color:#bbb'>+0.160</span></td><td class='negl'><span style='color:#bbb'>-0.045</span></td><td>0.098</td><td style='font-size:0.8em;text-align:left'>PC1 (Factor 1)</td><td class='mixed'>MIXED</td></tr><tr><td class='param-col'>NO₃⁻ (mg/L)</td><td class='negl'><span style='color:#bbb'>-0.074</span></td><td class='negl'><span style='color:#bbb'>-0.196</span></td><td class='weak'>-0.465</td><td>0.261</td><td style='font-size:0.8em;text-align:left'>PC3 (Factor 3)</td><td class='ant'>ANTHROPOGENIC</td></tr><tr><td class='param-col'>F⁻ (mg/L)</td><td class='negl'><span style='color:#bbb'>+0.042</span></td><td class='weak'>+0.450</td><td class='negl'><span style='color:#bbb'>+0.018</span></td><td>0.205</td><td style='font-size:0.8em;text-align:left'>PC2 (Factor 2)</td><td class='mixed'>MIXED</td></tr><tr class='eigen-row'><td class='param-col'>Eigenvalue</td><td>1.000</td><td>1.000</td><td>1.000</td><td></td><td></td><td></td></tr><tr class='stat-row'><td class='param-col'>% Variance Explained</td><td>6.7%</td><td>6.7%</td><td>6.7%</td><td></td><td></td><td></td></tr><tr class='stat-row'><td class='param-col'>Cumulative % Variance</td><td>6.7%</td><td>13.3%</td><td>20.0%</td><td></td><td></td><td></td></tr>
+</tbody></table>
+</div>
+<p class='note'>Varimax-rotated loadings. Strong: |loading|≥0.70; Moderate: 0.50–0.69; Weak: 0.30–0.49; Negligible: &lt;0.30.<br>
+Source attribution: parameters co-loading with Ca²⁺/Mg²⁺/HCO₃⁻/TH → GEOGENIC; with NO₃⁻/Cl⁻/Na⁺/K⁺/EC → ANTHROPOGENIC; split → MIXED.</p>
+</body></html>
